@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Interno</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       CSS VARIABLES — Cambiar tema desde acá
+       ═══════════════════════════════════════════ */
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #181a24;
+      --bg-card: #1e2030;
+      --bg-card-hover: #262840;
+      --text-primary: #e8e9ed;
+      --text-secondary: #8b8fa3;
+      --text-muted: #5c5f73;
+      --accent: #6c9bff;
+      --accent-glow: rgba(108, 155, 255, 0.15);
+      --accent-warm: #ffb86c;
+      --border: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(108, 155, 255, 0.3);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
+      --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.45);
+      --font-body: 'DM Sans', system-ui, sans-serif;
+      --font-display: 'Playfair Display', Georgia, serif;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+      /* Badge colors by category */
+      --cat-nomina: #6c9bff;
+      --cat-reportes: #a78bfa;
+      --cat-gestion: #34d399;
+      --cat-utilidades: #fbbf24;
+      --cat-default: #8b8fa3;
+    }
+
+    /* Light mode override */
+    :root.light {
+      --bg-primary: #f4f5f7;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f0f1f5;
+      --text-primary: #1a1c2e;
+      --text-secondary: #5c5f73;
+      --text-muted: #9ca0b0;
+      --border: rgba(0, 0, 0, 0.08);
+      --border-hover: rgba(108, 155, 255, 0.4);
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ═══════════════════════════════════════════
+       BACKGROUND TEXTURE
+       ═══════════════════════════════════════════ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 15% 20%, rgba(108,155,255,0.06), transparent),
+        radial-gradient(ellipse 500px 350px at 85% 70%, rgba(167,139,250,0.04), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       LAYOUT
+       ═══════════════════════════════════════════ */
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ═══════════════════════════════════════════
+       HEADER
+       ═══════════════════════════════════════════ */
+    .header {
+      padding: 48px 0 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header__brand h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .header__brand p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-top: 4px;
+      font-weight: 300;
+    }
+
+    .header__meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header__meta .stat {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .theme-toggle {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: grid;
+      place-items: center;
+      transition: var(--transition);
+    }
+    .theme-toggle:hover {
+      border-color: var(--border-hover);
+      color: var(--accent);
+    }
+
+    /* ═══════════════════════════════════════════
+       TOOLBAR: Search + Filters
+       ═══════════════════════════════════════════ */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 20px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .search-box__icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      padding: 10px 14px 10px 40px;
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: var(--transition);
+    }
+    .search-box input::placeholder { color: var(--text-muted); }
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .filter-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .chip:hover { border-color: var(--text-muted); color: var(--text-primary); }
+    .chip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* ═══════════════════════════════════════════
+       GRID
+       ═══════════════════════════════════════════ */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 18px;
+      padding-bottom: 80px;
+    }
+
+    /* ═══════════════════════════════════════════
+       CARD
+       ═══════════════════════════════════════════ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: var(--transition);
+      box-shadow: var(--shadow-card);
+      position: relative;
+      overflow: hidden;
+      animation: cardIn 0.4s ease both;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      opacity: 0;
+      transition: opacity var(--transition);
+      background: linear-gradient(135deg, var(--accent-glow), transparent 60%);
+      pointer-events: none;
+    }
+
+    .card:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-3px);
+    }
+    .card:hover::after { opacity: 1; }
+
+    .card__top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .card__icon {
+      font-size: 2rem;
+      line-height: 1;
+      filter: saturate(0.85);
+    }
+
+    .card__badges {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 9px;
+      border-radius: 4px;
+      line-height: 1.4;
+    }
+
+    .badge--cat {
+      background: rgba(108, 155, 255, 0.12);
+      color: var(--cat-default);
+    }
+    .badge--cat[data-cat="Nómina"]       { color: var(--cat-nomina);      background: rgba(108,155,255,0.12); }
+    .badge--cat[data-cat="Reportes"]     { color: var(--cat-reportes);    background: rgba(167,139,250,0.12); }
+    .badge--cat[data-cat="Gestión"]      { color: var(--cat-gestion);     background: rgba(52,211,153,0.12); }
+    .badge--cat[data-cat="Utilidades"]   { color: var(--cat-utilidades);  background: rgba(251,191,36,0.12); }
+
+    .badge--beta {
+      background: rgba(255, 184, 108, 0.15);
+      color: var(--accent-warm);
+    }
+
+    .card__name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .card__desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      font-weight: 300;
+    }
+
+    .card__footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .card__version {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .card__arrow {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      transition: var(--transition);
+    }
+    .card:hover .card__arrow {
+      color: var(--accent);
+      transform: translateX(3px);
+    }
+
+    /* ═══════════════════════════════════════════
+       EMPTY STATE
+       ═══════════════════════════════════════════ */
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty__icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty__text { font-size: 0.95rem; }
+
+    /* ═══════════════════════════════════════════
+       LOADING
+       ═══════════════════════════════════════════ */
+    .loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══════════════════════════════════════════
+       ERROR BANNER
+       ═══════════════════════════════════════════ */
+    .error-banner {
+      background: rgba(255, 100, 100, 0.1);
+      border: 1px solid rgba(255, 100, 100, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      color: #ff8a8a;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .error-banner.visible { display: block; }
+
+    /* ═══════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════ */
+    .footer {
+      text-align: center;
+      padding: 24px 0 40px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE
+       ═══════════════════════════════════════════ */
+    @media (max-width: 680px) {
+      .header { padding-top: 32px; }
+      .grid { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .filter-chips { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="shell">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header__brand">
+        <h1 id="portalTitle">Portal Interno</h1>
+        <p id="portalSubtitle">Cargando...</p>
+      </div>
+      <div class="header__meta">
+        <span class="stat" id="appCount"></span>
+        <button class="theme-toggle" id="themeBtn" title="Cambiar tema">☀️</button>
+      </div>
+    </header>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-box__icon">🔎</span>
+        <input type="text" id="searchInput" placeholder="Buscar app por nombre o descripción..." autocomplete="off">
+      </div>
+      <div class="filter-chips" id="filterChips">
+        <button class="chip active" data-cat="all">Todas</button>
+        <!-- chips dinámicos se agregan acá -->
+      </div>
+    </div>
+
+    <!-- ERROR -->
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- GRID -->
+    <div class="grid" id="appGrid">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Cargando aplicaciones...</p>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer" id="footer"></footer>
+
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════════
+       CONFIG
+       ═══════════════════════════════════════════ */
+    const CONFIG = {
+      // Ruta al JSON. Cambiar si la estructura de carpetas es diferente.
+      jsonPath: './apps.json',
+
+      // Cache-busting: evita que SharePoint sirva versión cacheada.
+      // Agrega ?t=timestamp a cada request del JSON.
+      cacheBust: true,
+    };
+
+    /* ═══════════════════════════════════════════
+       STATE
+       ═══════════════════════════════════════════ */
+    let allApps = [];
+    let categories = [];
+    let activeCategory = 'all';
+    let searchTerm = '';
+
+    /* ═══════════════════════════════════════════
+       THEME
+       ═══════════════════════════════════════════ */
+    const themeBtn = document.getElementById('themeBtn');
+    const savedTheme = localStorage.getItem('portal-theme') || 'dark';
+    if (savedTheme === 'light') document.documentElement.classList.add('light');
+    updateThemeIcon();
+
+    themeBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('light');
+      const isLight = document.documentElement.classList.contains('light');
+      localStorage.setItem('portal-theme', isLight ? 'light' : 'dark');
+      updateThemeIcon();
+    });
+
+    function updateThemeIcon() {
+      const isLight = document.documentElement.classList.contains('light');
+      themeBtn.textContent = isLight ? '🌙' : '☀️';
+    }
+
+    /* ═══════════════════════════════════════════
+       FETCH DATA
+       ═══════════════════════════════════════════ */
+    async function loadApps() {
+      try {
+        let url = CONFIG.jsonPath;
+        if (CONFIG.cacheBust) {
+          url += (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+        }
+
+        const res = await fetch(url);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        // SharePoint a veces devuelve HTML en vez de JSON si el content-type
+        // no está bien configurado. Verificamos que sea JSON válido.
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error(
+            'El archivo apps.json no devolvió JSON válido. ' +
+            'Tip: en SharePoint, verificá que la extensión .json no esté bloqueada ' +
+            'en la Document Library. Alternativa: renombrá a apps.json.txt y ' +
+            'actualizá CONFIG.jsonPath.'
+          );
+        }
+
+        // Setear metadata
+        if (data.meta) {
+          document.getElementById('portalTitle').textContent = data.meta.titulo || 'Portal Interno';
+          document.getElementById('portalSubtitle').textContent = data.meta.subtitulo || '';
+          document.title = data.meta.titulo || 'Portal Interno';
+        }
+
+        allApps = (data.apps || []).filter(a => a.estado !== 'inactivo');
+        categories = [...new Set(allApps.map(a => a.categoria).filter(Boolean))].sort();
+
+        buildFilterChips();
+        renderApps();
+        updateCount();
+        updateFooter(data.meta);
+
+      } catch (err) {
+        console.error('Error cargando apps:', err);
+        showError(err.message);
+        document.getElementById('appGrid').innerHTML = `
+          <div class="empty">
+            <div class="empty__icon">⚠️</div>
+            <p class="empty__text">No se pudieron cargar las aplicaciones.<br>
+            Revisá la consola del navegador (F12) para más detalles.</p>
+          </div>`;
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       RENDER
+       ═══════════════════════════════════════════ */
+    function renderApps() {
+      const grid = document.getElementById('appGrid');
+      const filtered = allApps.filter(app => {
+        const matchCat = activeCategory === 'all' || app.categoria === activeCategory;
+        const matchSearch = !searchTerm ||
+          app.nombre.toLowerCase().includes(searchTerm) ||
+          app.descripcion.toLowerCase().includes(searchTerm) ||
+          (app.categoria || '').toLowerCase().includes(searchTerm);
+        return matchCat && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="empty">
+            <div class="empty__icon">🔍</div>
+            <p class="empty__text">No se encontraron apps con ese criterio.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map((app, i) => `
+        <a class="card"
+           href="${app.url}"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Abrir ${app.nombre}"
+           style="animation-delay: ${i * 0.06}s">
+          <div class="card__top">
+            <span class="card__icon">${app.icono || '📦'}</span>
+            <div class="card__badges">
+              ${app.categoria ? `<span class="badge badge--cat" data-cat="${app.categoria}">${app.categoria}</span>` : ''}
+              ${app.estado === 'beta' ? '<span class="badge badge--beta">Beta</span>' : ''}
+            </div>
+          </div>
+          <div class="card__name">${app.nombre}</div>
+          <div class="card__desc">${app.descripcion}</div>
+          <div class="card__footer">
+            <span class="card__version">v${app.version}</span>
+            <span class="card__arrow">→</span>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    /* ═══════════════════════════════════════════
+       FILTER CHIPS
+       ═══════════════════════════════════════════ */
+    function buildFilterChips() {
+      const container = document.getElementById('filterChips');
+      // Keep "Todas" chip, add dynamic ones
+      const dynamicChips = categories.map(cat =>
+        `<button class="chip" data-cat="${cat}">${cat}</button>`
+      ).join('');
+      container.innerHTML = `<button class="chip active" data-cat="all">Todas</button>${dynamicChips}`;
+
+      container.addEventListener('click', (e) => {
+        const chip = e.target.closest('.chip');
+        if (!chip) return;
+        container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        activeCategory = chip.dataset.cat;
+        renderApps();
+      });
+    }
+
+    /* ═══════════════════════════════════════════
+       SEARCH
+       ═══════════════════════════════════════════ */
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchTerm = e.target.value.toLowerCase().trim();
+      renderApps();
+    });
+
+    /* ═══════════════════════════════════════════
+       HELPERS
+       ═══════════════════════════════════════════ */
+    function updateCount() {
+      document.getElementById('appCount').textContent = `${allApps.length} apps`;
+    }
+
+    function updateFooter(meta) {
+      const footer = document.getElementById('footer');
+      const date = meta?.ultimaActualizacion || '';
+      footer.textContent = date
+        ? `Última actualización del catálogo: ${date}`
+        : '';
+    }
+
+    function showError(msg) {
+      const banner = document.getElementById('errorBanner');
+      banner.textContent = '⚠️ ' + msg;
+      banner.classList.add('visible');
+    }
+
+    /* ═══════════════════════════════════════════
+       KEYBOARD SHORTCUT: Ctrl+K to focus search
+       ═══════════════════════════════════════════ */
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+      }
+    });
+
+    /* ═══════════════════════════════════════════
+       INIT
+       ═══════════════════════════════════════════ */
+    loadApps();
+  </script>
+
+</body>
+</html>
