@@ -431,6 +431,8 @@
   .cross-table .td-label { color: var(--text2); font-family: var(--sans); font-size: 12px; }
   .cross-table .td-num { text-align: right; white-space: nowrap; }
   .cross-table .td-pos { color: var(--muted); font-size: 10px; }
+  .cross-table .td-ctrl { width: 150px; text-align: right; font-size: 11px; border-left: 1px solid rgba(0,180,216,.15); padding: 4px 8px; }
+  .cross-table thead .td-ctrl { color: var(--accent); font-size: 10px; font-weight: 600; }
   .cross-table .td-status { text-align: center; width: 22px; font-size: 14px; }
   .cross-table tr.row-ok { background: #4cde8c06; }
   .cross-table tr.row-err { background: #ff575709; }
@@ -1989,28 +1991,34 @@ function crossValidar(rd, trabajadores) {
   const r07 = t.lines['07'] || '';
   const r08 = t.lines['08'] || '';
 
+  // Helper: leer valor numérico de una línea (pos 1-based, len chars)
+  const numLine = (line, pos, len = 15) => {
+    if (!line || line.length < pos + len - 1) return 0;
+    return parseInt(line.substr(pos - 1, len), 10) || 0;
+  };
+
   // Agrega fila con sliding window (campos individuales del TXT)
-  function addSlide(f1359Name, posDesc, repLabel, repVal, reg, pos, len, note) {
+  function addSlide(f1359Name, posDesc, repLabel, repVal, reg, pos, len, note, controlVal = null) {
     const regKey = reg && reg.length >= 2 ? reg.substr(0, 2) : null;
     const _patch = regKey ? { regKey, pos, len } : null;
     const rc = parseRegCol(posDesc);
     if (repVal === null || repVal === undefined) {
-      rows.push({ f1359Name, posDesc, repLabel, repVal: null, status: 'skip', txtExact: null, delta: null, note: 'No encontrado en el reporte', _patch: null, ...rc });
+      rows.push({ f1359Name, posDesc, repLabel, repVal: null, status: 'skip', txtExact: null, delta: null, note: 'No encontrado en el reporte', _patch: null, controlVal, ...rc });
       return;
     }
     const r = findInTxt(reg, pos, len, repVal);
-    rows.push({ f1359Name, posDesc, repLabel, repVal, ...r, note, _patch, ...rc });
+    rows.push({ f1359Name, posDesc, repLabel, repVal, ...r, note, _patch, controlVal, ...rc });
   }
 
   // Agrega fila para valores compuestos (suma de campos, sin sliding window — no parcheable)
-  function addCalc(f1359Name, posDesc, repLabel, repVal, txtVal, note) {
+  function addCalc(f1359Name, posDesc, repLabel, repVal, txtVal, note, controlVal = null) {
     const rc = parseRegCol(posDesc);
     if (repVal === null || repVal === undefined) {
-      rows.push({ f1359Name, posDesc, repLabel, repVal: null, status: 'skip', txtExact: txtVal, delta: null, note: 'No encontrado en el reporte', _patch: null, ...rc });
+      rows.push({ f1359Name, posDesc, repLabel, repVal: null, status: 'skip', txtExact: txtVal, delta: null, note: 'No encontrado en el reporte', _patch: null, controlVal, ...rc });
       return;
     }
     const match = txtVal !== null && Math.abs(repVal - txtVal) <= 1;
-    rows.push({ f1359Name, posDesc, repLabel, repVal, status: match ? 'ok' : 'mismatch', txtExact: txtVal, delta: null, note, _patch: null, ...rc });
+    rows.push({ f1359Name, posDesc, repLabel, repVal, status: match ? 'ok' : 'mismatch', txtExact: txtVal, delta: null, note, _patch: null, controlVal, ...rc });
   }
 
   // ── Reg.03 — Remuneraciones Gravadas ──
@@ -2040,10 +2048,20 @@ function crossValidar(rd, trabajadores) {
       ...parseRegCol(best.posDesc) });
   }
 
+  // Control ARCA 13592303: C13 = C3+C4+C5+C6+C7+C8+C9+C10+C11+C12
+  const ctrlTotGrav = r03.length >= 163
+    ? numLine(r03,14) + numLine(r03,29) + numLine(r03,44) + numLine(r03,59) +
+      numLine(r03,74) + numLine(r03,89) + numLine(r03,104) + numLine(r03,119) +
+      numLine(r03,134) + numLine(r03,149)
+    : null;
   addSlide('TOTAL REMUNERACIÓN GRAVADA', 'Reg.03 · C13 · col.164–178',
-    'TOTAL HABERES', rd['TOTAL HABERES'] ?? null, r03, 164, 15);
+    'TOTAL HABERES', rd['TOTAL HABERES'] ?? null, r03, 164, 15, null, ctrlTotGrav);
 
   const totHabRep = rd['TOTAL HABERES'] ?? null;
+  // Control ARCA: Reg.04 C20 = Reg.03.C13 + Reg.04.C19 (min 0)
+  const ctrlTotRem = r03.length >= 178 && r04.length >= 268
+    ? Math.max(0, numLine(r03, 164) + numLine(r04, 254))
+    : null;
   if (totHabRep !== null) {
     const txtTotRem = r04.length >= 283 ? parseInt(r04.substr(268, 15), 10) : NaN;
     if (!isNaN(txtTotRem) && txtTotRem > totHabRep + 1) {
@@ -2053,12 +2071,12 @@ function crossValidar(rd, trabajadores) {
       rows.push({
         f1359Name: 'TOTAL REMUNERACIONES', posDesc: 'Reg.04 · C20 · col.269–283',
         repLabel: 'TOTAL HABERES', repVal: totHabRep,
-        status: 'warn', txtExact: txtTotRem, delta: null,
+        status: 'warn', txtExact: txtTotRem, delta: null, controlVal: ctrlTotRem,
         note: `El TXT incluye remuneraciones exentas/no alcanzadas (Reg.04 C3–C18) que no figuran en el reporte IG. Diferencia esperada: $\u00a0${fmtDiff}`,
         _patch: null, ...parseRegCol('Reg.04 · C20 · col.269–283')
       });
     } else {
-      addSlide('TOTAL REMUNERACIONES', 'Reg.04 · C20 · col.269–283', 'TOTAL HABERES', totHabRep, r04, 269, 15);
+      addSlide('TOTAL REMUNERACIONES', 'Reg.04 · C20 · col.269–283', 'TOTAL HABERES', totHabRep, r04, 269, 15, null, ctrlTotRem);
     }
   }
 
@@ -2101,17 +2119,86 @@ function crossValidar(rd, trabajadores) {
   addSlide('Hijos / Hijastros ($)',             'Reg.06 · C7 · col.48–62',   'Hijos (parte)',                 rd['Hijos']??null, r06, 48, 15,
     'El reporte muestra el total Hijos. C7 es hijos sin incapacidad; C10 es con incapacidad.');
   addSlide('Deducción Especial',                'Reg.06 · C12 · col.97–111', 'Deducción especial',            rd['Deducción especial']??null, r06, 97, 15);
-  addSlide('Ded. Especial Adicional (12ava)',   'Reg.06 · C13 · col.112–126','Ded. especial 2° Párr. Art.30', rd['Deducción especial 2° Párr. Art. 30']??null, r06, 112, 15);
+
+  // Variables compartidas Reg.06 para controles ARCA
+  const gniTxt    = numLine(r06, 14);   // C3 Ganancia No Imponible
+  const cfTxt     = numLine(r06, 82);   // C11 Total Cargas de Familia
+  const dedEspTxt = numLine(r06, 97);   // C12 Deducción Especial
+
+  // Control ARCA 13592610: C13 ≤ (GNI + CF + DedEsp) / 12
+  const ctrlDedAdd = r06.length >= 111
+    ? Math.floor((gniTxt + cfTxt + dedEspTxt) / 12)
+    : null;
+  addSlide('Ded. Esp. Adicional (12ava)',   'Reg.06 · C13 · col.112–126','Ded. especial 2° Párr. Art.30',
+    rd['Deducción especial 2° Párr. Art. 30']??null, r06, 112, 15,
+    'ARCA 13592610: debe ser ≤ (GNI + CF + Ded.Esp.) / 12.', ctrlDedAdd);
+
+  // ── Reg.06 C11 — TOTAL CARGAS DE FAMILIA (ARCA 13592608) ──
+  if (r06.length >= 96) {
+    const txtCF  = numLine(r06, 82);
+    const ctrlCF = numLine(r06, 29) + numLine(r06, 48) + numLine(r06, 67); // C4+C7+C10
+    rows.push({
+      f1359Name: 'TOTAL CARGAS DE FAMILIA', posDesc: 'Reg.06 · C11 · col.82–96',
+      repLabel: null, repVal: null,
+      status: Math.abs(txtCF - ctrlCF) <= 1 ? 'ok' : 'mismatch',
+      txtExact: txtCF, delta: null, controlVal: ctrlCF,
+      note: 'ARCA 13592608: debe = Cónyuge (C4) + Hijos (C7) + Hijos incap. (C10).',
+      _patch: { regKey: '06', pos: 82, len: 15 }, _patchVal: ctrlCF,
+      ...parseRegCol('Reg.06 · C11 · col.82–96')
+    });
+  }
+
+  // ── Reg.06 C15 — TOTAL DEDUCCIONES ART.30 (ARCA 13592612 + 13592613) ──
+  let ctrlArt30 = 0;
+  if (r06.length >= 156) {
+    const txtArt30 = numLine(r06, 142);
+    ctrlArt30 = gniTxt + cfTxt + dedEspTxt + numLine(r06, 112) + numLine(r06, 127);
+    // C3 + C11 + C12 + C13 + C14
+    const maxArt30 = (r03.length >= 178 ? numLine(r03, 164) : 0) +
+                     (r04.length >= 268 ? numLine(r04, 254) : 0);
+    let art30Note = 'ARCA 13592613: debe = GNI + CF + Ded.Esp. + Ded.Esp.Add. + Ded.Esp.If.';
+    if (txtArt30 > maxArt30 + 1) {
+      art30Note += ` ⚠ ARCA 13592612: supera Rem.Grav.+No Grav. ($${(maxArt30/100).toLocaleString('es-AR',{minimumFractionDigits:2})}). Art.25 LIG.`;
+    }
+    rows.push({
+      f1359Name: 'TOTAL DEDUCCIONES ART.30', posDesc: 'Reg.06 · C15 · col.142–156',
+      repLabel: null, repVal: null,
+      status: Math.abs(txtArt30 - ctrlArt30) <= 1 ? 'ok' : 'mismatch',
+      txtExact: txtArt30, delta: null, controlVal: ctrlArt30,
+      note: art30Note,
+      _patch: { regKey: '06', pos: 142, len: 15 }, _patchVal: ctrlArt30,
+      ...parseRegCol('Reg.06 · C15 · col.142–156')
+    });
+  }
 
   const totDedRep = rd['TOTAL DEDUCCIONES'] ?? null;
   if (totDedRep !== null) {
-    const dg  = r05.length >= 478 ? (parseInt(r05.substr(463, 15), 10) || 0) : 0;
-    const da  = r06.length >= 156 ? (parseInt(r06.substr(141, 15), 10) || 0) : 0;
-    addCalc('TOTAL Ded. Generales + Art.30', 'Reg.05 C33 + Reg.06 C15', 'TOTAL DEDUCCIONES', totDedRep, dg + da);
+    const dg = r05.length >= 478 ? (parseInt(r05.substr(463, 15), 10) || 0) : 0;
+    const da = r06.length >= 156 ? (parseInt(r06.substr(141, 15), 10) || 0) : 0;
+    const ctrlDedGen = r05.length >= 463
+      ? [14,29,44,59,74,89,104,119,134,149,164,179,194,209,224,
+         239,254,269,284,299,314,329,344,359,374,389,404,419,434,449]
+        .reduce((s, p) => s + numLine(r05, p), 0)
+      : null;
+    const ctrlDedComb = ctrlDedGen !== null ? ctrlDedGen + ctrlArt30 : null;
+    rows.push({
+      f1359Name: 'TOTAL Ded. Generales + Art.30', posDesc: 'Reg.05 C33 + Reg.06 C15',
+      repLabel: 'TOTAL DEDUCCIONES', repVal: totDedRep,
+      status: Math.abs(totDedRep - (dg+da)) <= 1 ? 'ok' : 'mismatch',
+      txtExact: dg + da, delta: null, controlVal: ctrlDedComb,
+      note: 'Suma Reg.05 C33 + Reg.06 C15 comparada contra reporte IG.',
+      _patch: null, _reg: '05', _col: 34
+    });
   }
 
   // ── Reg.08 — Cálculo del Impuesto ──
-  addSlide('Remuneración Sujeta a Impuesto', 'Reg.08 · C3 · col.14–28',  'Monto Imponible',             rd['Monto Imponible']??null, r08, 14, 15);
+  // Control ARCA: C3 = Reg.03.C13 − Reg.05.C33 − Reg.06.C15 (mín 0)
+  const ctrlRemSujeta = r03.length >= 178 && r05.length >= 478 && r06.length >= 156
+    ? Math.max(0, numLine(r03, 164) - numLine(r05, 464) - numLine(r06, 142))
+    : null;
+  addSlide('Remuneración Sujeta a Impuesto', 'Reg.08 · C3 · col.14–28',  'Monto Imponible',
+    rd['Monto Imponible']??null, r08, 14, 15,
+    'ARCA: Rem.Gravada − Ded.Generales − Ded.Art.30 (mín 0).', ctrlRemSujeta);
   addSlide('Impuesto Determinado',           'Reg.08 · C5 · col.31–45',  'Impuesto Escala',             rd['Impuesto Escala']??null, r08, 31, 15);
   // Impuesto Retenido — en Final el TXT debe ser $0 (no acumula retención del período anterior)
   const tipoValImpRet = document.getElementById('tipoPres')?.value || '';
@@ -2137,6 +2224,42 @@ function crossValidar(rd, trabajadores) {
   // ── Reg.07 — Pagos a Cuenta ──
   addSlide('Créditos/Débitos Bancarios RG2111', 'Reg.07 · C4 · col.29–43', 'Creditos y debitos bancarios', rd['Creditos y debitos bancarios']??null, r07, 29, 15);
 
+  // ── Reg.07 C13 — TOTAL PAGOS A CUENTA ──
+  if (r07.length >= 178) {
+    const txtPAC  = numLine(r07, 164);
+    const ctrlPAC = [14,29,44,59,74,89,104,119,134,149]
+      .reduce((s, p) => s + numLine(r07, p), 0);
+    rows.push({
+      f1359Name: 'TOTAL PAGOS A CUENTA', posDesc: 'Reg.07 · C13 · col.164–178',
+      repLabel: null, repVal: null,
+      status: Math.abs(txtPAC - ctrlPAC) <= 1 ? 'ok' : 'mismatch',
+      txtExact: txtPAC, delta: null, controlVal: ctrlPAC,
+      note: 'Suma de C3..C12 (todas las RG de pagos a cuenta).',
+      _patch: { regKey: '07', pos: 164, len: 15 }, _patchVal: ctrlPAC,
+      ...parseRegCol('Reg.07 · C13 · col.164–178')
+    });
+  }
+
+  // ── Reg.08 C7 — Subtotal saldo determinado (Imp.Det − Imp.Ret) ──
+  if (r08.length >= 75) {
+    const txtSub  = numLine(r08, 61);
+    const ctrlSub = Math.max(0, numLine(r08, 31) - numLine(r08, 46));
+    rows.push({
+      f1359Name: 'Subtotal Saldo Determinado', posDesc: 'Reg.08 · C7 · col.61–75',
+      repLabel: null, repVal: null,
+      status: Math.abs(txtSub - ctrlSub) <= 1 ? 'ok' : 'mismatch',
+      txtExact: txtSub, delta: null, controlVal: ctrlSub,
+      note: 'Imp. Determinado − Imp. Retenido (≥ 0).',
+      _patch: null,
+      ...parseRegCol('Reg.08 · C7 · col.61–75')
+    });
+  }
+
+  // Control ARCA: C9 = C7 − C8 (Auto-ret) − Reg.07.C13
+  const ctrlSaldo = r08.length >= 90 && r07.length >= 178
+    ? Math.max(0, numLine(r08, 61) - numLine(r08, 76) - numLine(r07, 164))
+    : null;
+
   // Saldo Determinado — puede ser negativo en el reporte (a favor del empleado)
   const impGanRep = rd['Impuesto a las ganancias de la liquidación'] ?? null;
   if (impGanRep !== null) {
@@ -2147,6 +2270,7 @@ function crossValidar(rd, trabajadores) {
     if (tipoVal === '2' && impGanRep < 0 && txtSaldoVal === 0) {
       rows.push({ f1359Name: 'SALDO DETERMINADO', posDesc: 'Reg.08 · C9 · col.91–105',
         repLabel: 'Impuesto ganancias (liq.)', repVal: impGanRep, status: 'ok', txtExact: 0, delta: null,
+        controlVal: ctrlSaldo,
         note: 'Liq. Final: saldo a favor del empleado. El TXT registra $0 — comportamiento esperado.',
         _patch: null, _patchAbsolute: true, ...parseRegCol('Reg.08 · C9 · col.91–105') });
     } else {
@@ -2165,6 +2289,7 @@ function crossValidar(rd, trabajadores) {
       }
       rows.push({ f1359Name: 'SALDO DETERMINADO', posDesc: 'Reg.08 · C9 · col.91–105',
         repLabel: 'Impuesto ganancias (liq.)', repVal: impGanRep, ...f, status: saldoStatus,
+        controlVal: ctrlSaldo,
         note: saldoNote,
         _patch: { regKey: '08', pos: 91, len: 15 }, _patchAbsolute: true,
         ...parseRegCol('Reg.08 · C9 · col.91–105') });
@@ -2214,7 +2339,8 @@ function renderResults(errores, advertencias, oks, infos, lines, crossResults) {
     const cMismatch = crossResults.filter(r => r.status === 'mismatch').length;
     const cTxtOnly  = crossResults.filter(r => r.status === 'txt-only').length;
     const hasPatchable = crossResults.some(r => r._patch && (r.status === 'mismatch' || r.status === 'shifted'));
-    const colCount  = hasPatchable ? 7 : 6;
+    const hasControl   = crossResults.some(r => r.controlVal !== null && r.controlVal !== undefined);
+    const colCount     = hasPatchable ? (hasControl ? 8 : 7) : (hasControl ? 7 : 6);
 
     html += `<div class="result-section-title" style="color:var(--accent2);margin-bottom:12px">Cruce con reporte de liquidación — Meta 4</div>`;
     html += `<div class="cross-summary">`;
@@ -2238,8 +2364,9 @@ function renderResults(errores, advertencias, oks, infos, lines, crossResults) {
     html += `<th class="td-status"></th>
       <th class="td-label">Campo F.1359 · Origen reporte</th>
       <th class="td-num">Reporte IG</th>
-      <th class="td-num">TXT 1359</th>
-      <th class="td-diff">Diferencia</th>
+      <th class="td-num">TXT 1359</th>`;
+    if (hasControl) html += `<th class="td-ctrl">Control ARCA</th>`;
+    html += `<th class="td-diff">Diferencia</th>
       <th class="td-pos">Posición TXT</th>
     </tr></thead><tbody>`;
 
@@ -2259,7 +2386,14 @@ function renderResults(errores, advertencias, oks, infos, lines, crossResults) {
 
       let icon, rowCls, txtCell, repCell;
 
-      if (r.status === 'ok') {
+      // Filas ARCA-puras (sin valor IG, solo Control ARCA)
+      if (r.repVal === null && r.controlVal !== null && r.controlVal !== undefined) {
+        rowCls  = r.status === 'ok' ? 'row-ok' : 'row-err';
+        icon    = r.status === 'ok' ? '<span class="cross-ok">✓</span>' : '<span class="cross-err">✗</span>';
+        txtCell = r.status === 'ok' ? fmt(r.txtExact)
+          : `<span style="color:var(--danger)">${fmt(r.txtExact)}</span>`;
+        repCell = `<span style="color:var(--muted);font-size:10px">Solo Control ARCA</span>`;
+      } else if (r.status === 'ok') {
         icon = '<span class="cross-ok">✓</span>'; rowCls = 'row-ok';
         txtCell = fmt(r.txtExact);
       } else if (r.status === 'shifted') {
@@ -2291,11 +2425,28 @@ function renderResults(errores, advertencias, oks, infos, lines, crossResults) {
         txtCell = '<span style="color:var(--muted)">—</span>';
       }
 
-      repCell = r.repVal !== null
-        ? `<span style="color:var(--text)">${fmt(r.repVal)}</span>`
-        : (r.status === 'txt-only'
-            ? '<span style="color:var(--muted);font-size:11px">Sin datos IG</span>'
-            : '<span style="color:var(--muted)">—</span>');
+      // repCell: solo sobreescribir si NO es fila ARCA-pura (ya fue seteado arriba)
+      if (r.repVal !== null || r.controlVal === null || r.controlVal === undefined) {
+        repCell = r.repVal !== null
+          ? `<span style="color:var(--text)">${fmt(r.repVal)}</span>`
+          : (r.status === 'txt-only'
+              ? '<span style="color:var(--muted);font-size:11px">Sin datos IG</span>'
+              : '<span style="color:var(--muted)">—</span>');
+      }
+
+      // Columna Control ARCA
+      let ctrlCell = '';
+      if (hasControl) {
+        if (r.controlVal !== null && r.controlVal !== undefined) {
+          const ctrlMatch = Math.abs((r.txtExact ?? 0) - r.controlVal) <= 1;
+          const fmtCtrl = (Math.abs(r.controlVal)/100).toLocaleString('es-AR',{minimumFractionDigits:2});
+          ctrlCell = ctrlMatch
+            ? `<td class="td-ctrl"><span style="color:var(--ok);font-size:11px">✓ $\u00a0${fmtCtrl}</span></td>`
+            : `<td class="td-ctrl"><span style="color:var(--danger);font-size:11px">$\u00a0${fmtCtrl}</span><br><span class="note-inline" style="color:var(--muted);font-size:10px">ARCA espera este valor</span></td>`;
+        } else {
+          ctrlCell = `<td class="td-ctrl"><span style="color:var(--muted)">—</span></td>`;
+        }
+      }
 
       // Columna diferencia
       let diffCell = '<span style="color:var(--muted)">—</span>';
@@ -2327,6 +2478,7 @@ function renderResults(errores, advertencias, oks, infos, lines, crossResults) {
         <td class="td-label"><strong>${r.f1359Name}</strong>${labelNote}</td>
         <td class="td-num">${repCell}</td>
         <td class="td-num">${txtCell}</td>
+        ${ctrlCell}
         <td class="td-diff">${diffCell}</td>
         <td class="td-pos">${r.posDesc || ''}</td>
       </tr>`;
@@ -2492,7 +2644,25 @@ function applyPatches() {
   const patchesByReg = {};
   for (const { row } of fields) {
     const { regKey, pos, len } = row._patch;
-    const val = row._patchAbsolute ? Math.abs(row.repVal) : row.repVal;
+    let val;
+    const hasPatchVal = row._patchVal !== undefined && row._patchVal !== null;
+    const hasRepVal   = row.repVal !== null && row.repVal !== undefined;
+    if (hasPatchVal && hasRepVal && Math.abs(row._patchVal - Math.abs(row.repVal)) > 1) {
+      // Ambos valores difieren — preguntar al usuario
+      const fmtIg   = (Math.abs(row.repVal)/100).toLocaleString('es-AR',{minimumFractionDigits:2});
+      const fmtCtrl = (row._patchVal/100).toLocaleString('es-AR',{minimumFractionDigits:2});
+      const useIG = confirm(
+        `"${row.f1359Name}"\n\n` +
+        `• Reporte IG:    $\u00a0${fmtIg}\n` +
+        `• Control ARCA:  $\u00a0${fmtCtrl}\n\n` +
+        `¿Usar el valor del Reporte IG?\n(Cancelar = usar Control ARCA)`
+      );
+      val = useIG ? (row._patchAbsolute ? Math.abs(row.repVal) : row.repVal) : row._patchVal;
+    } else if (hasPatchVal) {
+      val = row._patchVal;
+    } else {
+      val = row._patchAbsolute ? Math.abs(row.repVal) : row.repVal;
+    }
     if (!patchesByReg[regKey]) patchesByReg[regKey] = [];
     patchesByReg[regKey].push({ pos, len, val, name: row.f1359Name });
   }
@@ -2565,7 +2735,7 @@ function downloadPatchedFile(content) {
 }
 
 // ── VERSIÓN (actualizar acá en cada release) ──────────────
-const APP_VERSION = 'v2.4';
+const APP_VERSION = 'v2.5';
 function buildSidebarFieldRef() {
   const container = document.getElementById('sbFieldRef');
   if (!container) return;
@@ -3371,6 +3541,13 @@ function _parseTxtCore(lines, errores, advertencias, oks, infos, anio, tipoEsper
             } else {
               pok({ msg: `Trabajador #${idx} — Reg.06: Total Cargas de Familia cuadra.`, rec: `Línea ${ln06}`, pos: p('06','11') });
             }
+            // ARCA 13592610: Ded.Esp.Adicional 12ava ≤ (GNI + CF + DedEsp) / 12
+            const limDeducAdd = Math.floor((gni + totalCF + deducEsp) / 12);
+            if (deducEspAdd > limDeducAdd + 1) {
+              pe({ msg: `Trabajador #${idx} — Reg.06: Ded.Esp.Adicional 12ava ($${(deducEspAdd/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) supera 1/12 de (GNI+CF+Ded.Esp.) = $${(limDeducAdd/100).toLocaleString('es-AR',{minimumFractionDigits:2})}. Código ARCA 13592610.`,
+                   rec: `Línea ${ln06}`, pos: p('06','13'),
+                   _patch: { regKey: '06', pos: 112, len: 15 }, _patchVal: limDeducAdd });
+            }
             const esperadoArt30 = gni + deducEsp + deducEspAdd + deducEspif + totalCF;
             if (Math.abs(totalArt30 - esperadoArt30) > 1) {
               pe({ msg: `Trabajador #${idx} — Reg.06: TOTAL DEDUCCIONES ART. 30 (${totalArt30.toLocaleString('es-AR')}) ≠ GNI + Ded. Esp. + Adicional + Específica + CF = ${esperadoArt30.toLocaleString('es-AR')}.`, rec: `Línea ${ln06}`, pos: p('06','15'), _patch: { regKey: '06', pos: 142, len: 15 }, _patchVal: esperadoArt30 });
@@ -3378,7 +3555,9 @@ function _parseTxtCore(lines, errores, advertencias, oks, infos, anio, tipoEsper
               pok({ msg: `Trabajador #${idx} — Reg.06: Total Deducciones Art. 30 cuadra.`, rec: `Línea ${ln06}`, pos: p('06','15') });
             }
             if (gni/100 > topes.gni * 1.01) pw({ msg: `Trabajador #${idx} — Reg.06: Ganancia No Imponible ($${(gni/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) excede el tope ${anio} de $${topes.gni.toLocaleString('es-AR',{minimumFractionDigits:2})}.`, rec: `Línea ${ln06}`, pos: p('06','3') });
-            if (totalArt30 > totalRemuneraciones + totalNoGravada) pe({ msg: `Trabajador #${idx} — Reg.06: TOTAL DED. ART. 30 (${totalArt30.toLocaleString('es-AR')}) supera Rem. Gravada + No Gravada. Art. 25 LIG prohíbe generar pérdidas.`, rec: `Línea ${ln06}`, pos: p('06','15') });
+            // ARCA 13592612: TOTAL DED. ART.30 ≤ Rem. Gravada + No Gravada (Art. 25 LIG)
+            const maxDedArt30 = totalGravada + totalNoGravada;
+            if (totalArt30 > maxDedArt30 + 1) pe({ msg: `Trabajador #${idx} — Reg.06: TOTAL DED. ART. 30 ($${(totalArt30/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) supera Rem. Gravada + No Gravada ($${(maxDedArt30/100).toLocaleString('es-AR',{minimumFractionDigits:2})}). Art. 25 LIG. Código ARCA 13592612.`, rec: `Línea ${ln06}`, pos: p('06','15') });
 
             if (r08 && r08.length === 105) {
               const remSujetaImp = num(r08, 14,15), impDet   = num(r08, 31,15);
