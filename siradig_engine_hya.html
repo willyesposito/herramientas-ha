@@ -583,6 +583,19 @@ function parseXML(xmlStr){
     cargas.push({apellido:tag(cf,'apellido'),nombre:tag(cf,'nombre'),nroDoc:tag(cf,'nroDoc'),parentesco:tag(cf,'parentesco'),fechaNac:tag(cf,'fechaNac'),mesDesde:tag(cf,'mesDesde')||'1',mesHasta:tag(cf,'mesHasta')||'12',porcentajeDeduccion:tag(cf,'porcentajeDeduccion')||'100',vigenteProximosPeriodos:tag(cf,'vigenteProximosPeriodos')||'N'});
   }
   data.cargasFamilia=cargas;
+  const empEntNodes=doc.getElementsByTagName('empEnt');
+  const ganLiqOtros=[];
+  for(let i=0;i<empEntNodes.length;i++){
+    const ee=empEntNodes[i];
+    const empEnt={cuit:tag(ee,'cuit'),denominacion:tag(ee,'denominacion'),convenioColectivo:tag(ee,'convenioColectivo'),transporteLargaDist:tag(ee,'transporteLargaDist'),transporteTerrLargaDist:tag(ee,'transporteTerrLargaDist'),meses:[]};
+    const ingApNodes=ee.getElementsByTagName('ingAp');
+    for(let j=0;j<ingApNodes.length;j++){
+      const ia=ingApNodes[j];
+      empEnt.meses.push({mes:ia.getAttribute('mes')||'',obraSoc:tagf(ia,'obraSoc'),segSocANSES:tagf(ia,'segSocANSES'),segSocCajas:tagf(ia,'segSocCajas'),sind:tagf(ia,'sind'),ganBrut:tagf(ia,'ganBrut'),retGan:tagf(ia,'retGan'),retribNoHab:tagf(ia,'retribNoHab'),ajusteRemGravadas:tagf(ia,'ajusteRemGravadas'),ajusteRemExeNoAlcanzadas:tagf(ia,'ajusteRemExeNoAlcanzadas'),asignFam:tagf(ia,'asignFam'),intPrestEmp:tagf(ia,'intPrestEmp'),indemLey4003:tagf(ia,'indemLey4003'),remunLey19640:tagf(ia,'remunLey19640'),remunCctPetro:tagf(ia,'remunCctPetro'),cursosSemin:tagf(ia,'cursosSemin'),indumEquipEmp:tagf(ia,'indumEquipEmp'),sac:tagf(ia,'sac')});
+    }
+    ganLiqOtros.push(empEnt);
+  }
+  data.ganLiqOtrosEmpEnt=ganLiqOtros;
   return data;
 }
 
@@ -707,15 +720,20 @@ function buildAppData(dic,pre,nomina,clientName,periodo1,periodo2){
       const ref=cf_p||cf_d;
       cargas.push({doc,apellido:ref.apellido,nombre:ref.nombre,parentesco:PAR_LABELS[ref.parentesco]||ref.parentesco,fechaNac:ref.fechaNac,estado,dic_desde:cf_d?.mesDesde||'',dic_hasta:cf_d?.mesHasta||'',pre_desde:cf_p?.mesDesde||'',pre_hasta:cf_p?.mesHasta||'',dic_pct:cf_d?.porcentajeDeduccion||'',pre_pct:cf_p?.porcentajeDeduccion||''});
     }
+    const OOEE_F=['ganBrut','retGan','obraSoc','segSocANSES','segSocCajas','sind','retribNoHab','ajusteRemGravadas','ajusteRemExeNoAlcanzadas','asignFam','intPrestEmp','indemLey4003','remunLey19640','remunCctPetro','cursosSemin','indumEquipEmp','sac'];
+    const sumOF=(arr,f)=>(arr||[]).reduce((s,ee)=>s+(ee.meses||[]).reduce((ms,m)=>ms+(m[f]||0),0),0);
+    const ooee_rows={};OOEE_F.forEach(f=>{const vd=sumOF(d.ganLiqOtrosEmpEnt,f),vp=sumOF(p.ganLiqOtrosEmpEnt,f);if(vd||vp)ooee_rows[f]={dic:vd,pre:vp,dif:vp-vd};});
+    const total_ooee_dic=Object.values(ooee_rows).reduce((s,v)=>s+v.dic,0);
+    const total_ooee_pre=Object.values(ooee_rows).reduce((s,v)=>s+v.pre,0);
     const ret_dic=d.retPerPagos||[];const ret_pre=p.retPerPagos||[];
     const total_ret_dic=ret_dic.reduce((s,r)=>s+r.monto,0);
     const total_ret_pre=ret_pre.reduce((s,r)=>s+r.monto,0);
-    const total_dif_full=(total_pre-total_dic)+(total_ret_pre-total_ret_dic);
+    const total_dif_full=(total_pre-total_dic)+(total_ret_pre-total_ret_dic)+(total_ooee_pre-total_ooee_dic);
     const nom=nomina[cuit]||{};
     const in_nomina=hasNomina?!!nom.CUIL:true;
     const id_empresa=nom.ID_EMPRESA?parseInt(nom.ID_EMPRESA):null;
     const id_convenio=nom.ID_CONVENIO?parseInt(nom.ID_CONVENIO):null;
-    employees.push({cuit,apellido,nombre,legajo:nom.ID_EMPLEADO?String(parseInt(nom.ID_EMPLEADO)):'',empresa:EMPRESA_LABELS[id_empresa]||'',id_empresa,cct:CONV_LABELS[id_convenio]||'',id_convenio,puesto:nom.N_PUESTO||'',departamento:nom.N_DEPARTAMENTO||'',in_nomina,only_in_pre:!dic[cuit],nroPres_dic:d.nroPresentacion||'',nroPres_pre:p.nroPresentacion||'',fecha_dic:d.fechaPresentacion||'',fecha_pre:p.fechaPresentacion||'',deds:ded_rows,total_dic,total_pre,total_dif:total_pre-total_dic,total_dif_full,cargas,ret_dic,ret_pre,total_ret_dic,total_ret_pre,tipo99_detail:p.tipo99_detail||d.tipo99_detail||[]});
+    employees.push({cuit,apellido,nombre,legajo:nom.ID_EMPLEADO?String(parseInt(nom.ID_EMPLEADO)):'',empresa:EMPRESA_LABELS[id_empresa]||'',id_empresa,cct:CONV_LABELS[id_convenio]||'',id_convenio,puesto:nom.N_PUESTO||'',departamento:nom.N_DEPARTAMENTO||'',in_nomina,only_in_pre:!dic[cuit],nroPres_dic:d.nroPresentacion||'',nroPres_pre:p.nroPresentacion||'',fecha_dic:d.fechaPresentacion||'',fecha_pre:p.fechaPresentacion||'',deds:ded_rows,total_dic,total_pre,total_dif:total_pre-total_dic,total_dif_full,cargas,ret_dic,ret_pre,total_ret_dic,total_ret_pre,tipo99_detail:p.tipo99_detail||d.tipo99_detail||[],ooee_rows,total_ooee_dic,total_ooee_pre,ganLiqOtrosEmpEnt_pre:p.ganLiqOtrosEmpEnt||[],ganLiqOtrosEmpEnt_dic:d.ganLiqOtrosEmpEnt||[]});
   }
   // ── SORT: legajo numérico asc, luego apellido/nombre asc ──
   employees.sort((a,b)=>{
@@ -849,8 +867,9 @@ function buildCard(e,tl){
   const hasChanges=Math.abs(e.total_dif_full)>0.01||e.cargas.some(c=>c.estado!=='sin cambio');
   const hasCargaChange=e.cargas.some(c=>c.estado!=='sin cambio');
   const hasRet=e.ret_pre.length>0;
+  const hasOOEE=Object.keys(e.ooee_rows||{}).length>0;
   const pills=[e.only_in_pre?'<span class="pill-new">NUEVO</span>':'',parseInt(e.nroPres_pre||0)>5?`<span class="pill-rect">Rect.${e.nroPres_pre}</span>`:'',!e.in_nomina?'<span class="pill-baja">⚠ Baja</span>':''].filter(Boolean).join('');
-  const subTags=[e.nroPres_dic?`Pres. ${APP_LABEL.p1} #${e.nroPres_dic}`:`Sin pres. ${APP_LABEL.p1}`,`Pres. ${APP_LABEL.p2} #${e.nroPres_pre||'—'}`,hasRet?'<span class="tag-pago">🏷 Pagos a cuenta</span>':'',hasCargaChange?'<span class="tag-carga">🏷 Cambio en cargas</span>':''].filter(Boolean).join('<span class="sep">·</span>');
+  const subTags=[e.nroPres_dic?`Pres. ${APP_LABEL.p1} #${e.nroPres_dic}`:`Sin pres. ${APP_LABEL.p1}`,`Pres. ${APP_LABEL.p2} #${e.nroPres_pre||'—'}`,hasRet?'<span class="tag-pago">🏷 Pagos a cuenta</span>':'',hasOOEE?'<span class="tag-ooee">🏢 Otros Emp./Ent.</span>':'',hasCargaChange?'<span class="tag-carga">🏷 Cambio en cargas</span>':''].filter(Boolean).join('<span class="sep">·</span>');
   const meta=[empPill(e.empresa,e.id_empresa),cctPill(e.cct),e.legajo?`<span class="mpill mpill-gray">Leg. ${e.legajo}</span>`:'',e.puesto?`<span class="mpill mpill-gray">${e.puesto}</span>`:''].filter(Boolean).join('');
   const dv=e.total_dif_full;const dc=dv>0.01?'pos':dv<-0.01?'neg':'zero';
   let tDic=0,tPre=0;for(const v of Object.values(e.deds)){tDic+=v.dic;tPre+=v.pre;}
@@ -866,10 +885,43 @@ function buildCard(e,tl){
   }
   for(const r of e.ret_pre){dedRows+=`<tr class="row-pago"><td class="rubro-name">🏷 ${RET_LABELS[r.tipo]||'Pago a cta.'}<span class="sub99">${r.denominacion||''}</span></td><td class="num">—</td><td class="num">${fmt(r.monto)}</td><td class="dif-pos">+${fmt(r.monto)}</td></tr>`;}
   const tDif=tPre-tDic;
-  let footRows=`<tr class="total-row"><td>Total deducciones</td><td class="num">${fmt(tDic)}</td><td class="num">${fmt(tPre)}</td><td class="${tDif>0.01?'dif-pos':tDif<-0.01?'dif-neg':'dif-zero'}">${tDif!==0?sfmt(tDif):'Sin cambio'}</td></tr>`;
-  if(e.total_ret_pre)footRows+=`<tr class="final-row"><td>Total final (c/ pagos a cta.)</td><td class="num">—</td><td class="num">${fmt(tPre+e.total_ret_pre)}</td><td style="text-align:right;color:var(--green)">${sfmt(e.total_dif_full)}</td></tr>`;
-  const dedSection=dedRows?`<div class="section-title">Deducciones — ${APP_LABEL.p1} vs. ${APP_LABEL.p2}</div><table class="ded-table"><thead><tr><th>Rubro</th><th>${APP_LABEL.p1.toUpperCase()}</th><th>${APP_LABEL.p2.toUpperCase()}</th><th>Diferencia</th></tr></thead><tbody>${dedRows}</tbody><tfoot>${footRows}</tfoot></table>`:'';
+  const OOEE_LBL={ganBrut:'Gan. Bruta',retGan:'Ret. Ganancias',obraSoc:'Obra Social',segSocANSES:'Seg.Soc. ANSES',segSocCajas:'Seg.Soc. Cajas',sind:'Sindicato',retribNoHab:'Retrib. No Hab.',ajusteRemGravadas:'Aj. Rem. Grav.',ajusteRemExeNoAlcanzadas:'Aj. Rem. Exe.',asignFam:'Asig. Familiares',intPrestEmp:'Int. Préstamo',indemLey4003:'Indem. L.4003',remunLey19640:'Rem. L.19640',remunCctPetro:'Rem. CCT Petro.',cursosSemin:'Cursos/Semin.',indumEquipEmp:'Indum./Equip.',sac:'SAC'};
+  const tOoeedic=Object.values(e.ooee_rows||{}).reduce((s,v)=>s+v.dic,0);
+  const tOoeepre=Object.values(e.ooee_rows||{}).reduce((s,v)=>s+v.pre,0);
+  const tOoeedif=tOoeepre-tOoeedic;
+  let ooeeRows='';
+  if(hasOOEE){
+    const empNames=[...(e.ganLiqOtrosEmpEnt_pre||[]),...(e.ganLiqOtrosEmpEnt_dic||[])].filter((v,i,a)=>a.findIndex(x=>x.cuit===v.cuit)===i).map(x=>x.denominacion||x.cuit).join(' · ');
+    const ooeePresDic=e.nroPres_dic?'Pres. '+APP_LABEL.p1+' #'+e.nroPres_dic:'';
+    const ooeePres=e.nroPres_pre?'Pres. '+APP_LABEL.p2+' #'+e.nroPres_pre:'';
+    ooeeRows+='<tr style="background:#e3f2fd"><td colspan="4" style="font-size:11px;font-weight:700;color:#1565c0;padding:5px 10px">🏢 OTROS EMP./ENT. — '+empNames+'<span style="font-weight:400;color:var(--gray);margin-left:6px">'+[ooeePresDic,ooeePres].filter(Boolean).join(' vs ')+'</span></td></tr>';
+    for(const [campo,v] of Object.entries(e.ooee_rows||{})){const label=OOEE_LBL[campo]||campo;const rc=v.dif>0.01?'row-changed-pos':v.dif<-0.01?'row-changed-neg':'';const dc2=v.dif>0.01?'dif-pos':v.dif<-0.01?'dif-neg':'dif-zero';ooeeRows+='<tr class="'+rc+'"><td class="rubro-name">'+label+'</td><td class="num">'+(v.dic>0?fmt(v.dic):'—')+'</td><td class="num">'+(v.pre>0?fmt(v.pre):'—')+'</td><td class="'+dc2+'">'+(v.dif!==0?sfmt(v.dif):'Sin cambio')+'</td></tr>';}
+    ooeeRows+='<tr class="total-row" style="font-style:italic"><td>Total Otros Emp./Ent.</td><td class="num">'+(tOoeedic>0?fmt(tOoeedic):'—')+'</td><td class="num">'+(tOoeepre>0?fmt(tOoeepre):'—')+'</td><td class="'+(tOoeedif>0.01?'dif-pos':tOoeedif<-0.01?'dif-neg':'dif-zero')+'">'+(tOoeedif!==0?sfmt(tOoeedif):'Sin cambio')+'</td></tr>';
+  }
+  let footRows='<tr class="total-row"><td>Total deducciones</td><td class="num">'+fmt(tDic)+'</td><td class="num">'+fmt(tPre)+'</td><td class="'+(tDif>0.01?'dif-pos':tDif<-0.01?'dif-neg':'dif-zero')+'">'+(tDif!==0?sfmt(tDif):'Sin cambio')+'</td></tr>';
+  const hasFinalRow=e.total_ret_pre||(tOoeedic>0)||(tOoeepre>0);
+  const finDic=tDic+tOoeedic;const finPre=tPre+(e.total_ret_pre||0)+tOoeepre;
+  const finLabel='Total final'+(e.total_ret_pre&&(tOoeedic||tOoeepre)?' (c/ pagos a cta. + OOEE)':e.total_ret_pre?' (c/ pagos a cta.)':' (c/ OOEE)');
+  if(hasFinalRow)footRows+='<tr class="final-row"><td>'+finLabel+'</td><td class="num">'+(finDic>0?fmt(finDic):'—')+'</td><td class="num">'+fmt(finPre)+'</td><td style="text-align:right;color:var(--green)">'+sfmt(e.total_dif_full)+'</td></tr>';
+  const dedSection=(dedRows||ooeeRows)?'<div class="section-title">Deducciones — '+APP_LABEL.p1+' vs. '+APP_LABEL.p2+'</div><table class="ded-table"><thead><tr><th>Rubro</th><th>'+APP_LABEL.p1.toUpperCase()+'</th><th>'+APP_LABEL.p2.toUpperCase()+'</th><th>Diferencia</th></tr></thead><tbody>'+dedRows+ooeeRows+'</tbody><tfoot>'+footRows+'</tfoot></table>':'';
   let cargasSection='';
+  const MESES_GL=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const CAMPOS_GL=[['ganBrut','Gan. Bruta'],['retGan','Ret. Ganancias'],['obraSoc','Obra Social'],['segSocANSES','Seg.Soc. ANSES'],['segSocCajas','Seg.Soc. Cajas'],['sind','Sindicato'],['retribNoHab','Retrib. No Hab.'],['ajusteRemGravadas','Aj. Rem. Grav.'],['ajusteRemExeNoAlcanzadas','Aj. Rem. Exe.'],['asignFam','Asig. Familiares'],['intPrestEmp','Int. Préstamo'],['indemLey4003','Indem. L.4003'],['remunLey19640','Rem. L.19640'],['remunCctPetro','Rem. CCT Petro.'],['cursosSemin','Cursos/Semin.'],['indumEquipEmp','Indum./Equip.'],['sac','SAC']];
+  let ganLiqSection='';
+  const allEmpEnts=[...new Map([...(e.ganLiqOtrosEmpEnt_pre||[]),...(e.ganLiqOtrosEmpEnt_dic||[])].map(x=>[x.cuit,x])).values()];
+  if(allEmpEnts.length){
+    const eeHtml=allEmpEnts.map(ee=>{
+      const allMeses=[...new Set((ee.meses||[]).map(m=>m.mes))].sort((a,b)=>parseInt(a)-parseInt(b));
+      const mesMap=Object.fromEntries((ee.meses||[]).map(m=>[m.mes,m]));
+      const campoCols=CAMPOS_GL.filter(([f])=>allMeses.some(m=>mesMap[m]&&(mesMap[m][f]||0)>0));
+      if(!campoCols.length)return'';
+      const thead='<tr><th class="rubro-name">Campo</th>'+allMeses.map(m=>'<th>'+( MESES_GL[parseInt(m)]||m)+'</th>').join('')+'</tr>';
+      const tbody=campoCols.map(([f,label])=>'<tr><td class="rubro-name">'+label+'</td>'+allMeses.map(m=>{const v=mesMap[m]?mesMap[m][f]||0:0;return'<td class="num">'+(v>0?fmt(v):'—')+'</td>';}).join('')+'</tr>').join('');
+      const flags=[ee.convenioColectivo?'CCT: '+ee.convenioColectivo:'',ee.transporteLargaDist==='S'?'Trans. L. Dist.':'',ee.transporteTerrLargaDist==='S'?'Trans. Terr. L. Dist.':''].filter(Boolean);
+      return'<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:var(--blue-dark);margin-bottom:4px">'+(ee.denominacion||ee.cuit)+'<span style="font-size:11px;font-weight:400;color:var(--gray);margin-left:8px">CUIT '+ee.cuit+'</span>'+(flags.length?'<span style="font-size:11px;color:var(--gray);margin-left:8px">'+flags.join(' · ')+'</span>':'')+'</div><div style="overflow-x:auto"><table class="ded-table"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div></div>';
+    }).join('');
+    if(eeHtml.trim())ganLiqSection='<div class="section-title">Ganancias Liq. Otros Empleadores/Entidades</div>'+eeHtml;
+  }
   if(e.cargas.length){
     const cRows=e.cargas.map(c=>{
       const rc=c.estado==='nueva'?'carga-nueva':c.estado==='eliminada'?'carga-eliminada':c.estado==='modificada'?'carga-modificada':'';
@@ -949,17 +1001,17 @@ function renderMatrix(){
   const at=all_tipos.filter(t=>fe.some(e=>e.deds[t]));
   let html=`<div class="matrix-wrap"><table class="matrix-table"><thead><tr><th class="col-emp">EMPLEADO</th><th><span class="th-main">LEGAJO</span></th><th><span class="th-main">EMPRESA</span></th><th><span class="th-main">CCT</span></th><th><span class="th-main">CARGAS</span></th>`;
   for(const t of at){const s=tipo_short[String(t)]||[tipo_labels[String(t)]||'Tipo '+t,''];html+=`<th><span class="th-main">${s[0]}</span>${s[1]?`<span class="th-sub">${s[1]}</span>`:''}</th>`;}
-  html+=`<th><span class="th-main">PAGOS A CTA.</span></th><th><span class="th-main">TOTAL ${APP_LABEL.p1.toUpperCase()}</span></th><th><span class="th-main">TOTAL ${APP_LABEL.p2.toUpperCase()}</span></th><th><span class="th-main">DIFERENCIA</span></th></tr></thead><tbody>`;
+  html+=`<th><span class="th-main">PAGOS A CTA.</span></th><th><span class="th-main">OTROS EMP.</span></th><th><span class="th-main">TOTAL ${APP_LABEL.p1.toUpperCase()}</span></th><th><span class="th-main">TOTAL ${APP_LABEL.p2.toUpperCase()}</span></th><th><span class="th-main">DIFERENCIA</span></th></tr></thead><tbody>`;
   for(const e of pageFe){
     const cc=e.cargas.length,cn=e.cargas.filter(c=>c.estado!=='sin cambio').length;
     const ret=e.total_ret_pre||0;const dc2=e.total_dif_full>0.01?'gc':e.total_dif_full<-0.01?'rc':'';
     html+=`<tr><td class="emp-name"><div class="en">${e.apellido}, ${e.nombre}</div><div class="ec">CUIL ${e.cuit}</div></td><td style="text-align:center">${e.legajo||'—'}</td><td>${empPill(e.empresa,e.id_empresa)||'—'}</td><td>${cctPill(e.cct)||'—'}</td><td style="text-align:center">${cc>0?`${cc} fam.${cn>0?` (${cn}↑)`:''}`:'—'}</td>`;
     for(const t of at){const v=e.deds[t];if(!v){html+='<td>—</td>';continue;}const cc3=v.dif>0.01?'gc':v.dif<-0.01?'rc':'';html+=`<td class="${cc3}">${fmtM(v.pre)}${v.dif!==0?`<br><span style="font-size:10px">${sfmt(v.dif)}</span>`:''}</td>`;}
-    html+=`<td class="${ret>0?'ac':''}">${ret>0?fmt(ret):'—'}</td><td>${fmt(e.total_dic)}</td><td>${fmt(e.total_pre)}</td><td class="${dc2}">${e.total_dif_full!==0?sfmt(e.total_dif_full):'—'}</td></tr>`;
+    html+=`<td class="${ret>0?'ac':''}">${ret>0?fmt(ret):'—'}</td><td class="${(e.total_ooee_pre||0)>0?'ac':''}">${(e.total_ooee_pre||0)>0?(fmtM(e.total_ooee_pre||0)+((e.total_ooee_pre||0)!==(e.total_ooee_dic||0)?'<br><span style="font-size:10px">'+sfmt((e.total_ooee_pre||0)-(e.total_ooee_dic||0))+'</span>':'')):'—'}</td><td>${fmt(e.total_dic)}</td><td>${fmt(e.total_pre)}</td><td class="${dc2}">${e.total_dif_full!==0?sfmt(e.total_dif_full):'—'}</td></tr>`;
   }
   // Footer totals over full filtered set
   const tr2=fe.reduce((s,e)=>s+(e.total_ret_pre||0),0),td2=fe.reduce((s,e)=>s+e.total_dic,0),tp2=fe.reduce((s,e)=>s+e.total_pre,0),tf=fe.reduce((s,e)=>s+e.total_dif_full,0);
-  html+=`<tfoot><tr><td class="emp-name">TOTAL FILTRADO (${fe.length})</td><td></td><td></td><td></td><td></td>${at.map(t=>{const vd=fe.reduce((s,e)=>s+(e.deds[t]?.dic||0),0),vp=fe.reduce((s,e)=>s+(e.deds[t]?.pre||0),0),dif=vp-vd;return`<td class="${dif>0.01?'gc':dif<-0.01?'rc':''}">${fmtM(vp)}</td>`}).join('')}<td>${tr2>0?fmtM(tr2):'—'}</td><td>${fmtM(td2)}</td><td>${fmtM(tp2)}</td><td class="${tf>0.01?'gc':tf<-0.01?'rc':''}">${sfmt(tf)}</td></tr></tfoot></table></div>`;
+  html+=`<tfoot><tr><td class="emp-name">TOTAL FILTRADO (${fe.length})</td><td></td><td></td><td></td><td></td>${at.map(t=>{const vd=fe.reduce((s,e)=>s+(e.deds[t]?.dic||0),0),vp=fe.reduce((s,e)=>s+(e.deds[t]?.pre||0),0),dif=vp-vd;return`<td class="${dif>0.01?'gc':dif<-0.01?'rc':''}">${fmtM(vp)}</td>`}).join('')}<td>${tr2>0?fmtM(tr2):'—'}</td><td>${(()=>{const tooe=fe.reduce((s,e)=>s+(e.total_ooee_pre||0),0);return tooe>0?fmtM(tooe):'—'})()}</td><td>${fmtM(td2)}</td><td>${fmtM(tp2)}</td><td class="${tf>0.01?'gc':tf<-0.01?'rc':''}">${sfmt(tf)}</td></tr></tfoot></table></div>`;
   wrap.innerHTML=html;
   renderPag('pg2',fe.length,tp,P2,p=>{P2=p;renderMatrix();window.scrollTo(0,0);});
 }
