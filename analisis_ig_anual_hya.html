@@ -1413,7 +1413,7 @@ async function initVersionDisplay(){
 }
 initVersionDisplay();
 
-function checkGate(){
+async function checkGate(){
  if(_gL)return;
  const btn=document.querySelector('#gate-screen button[onclick]');
  const inp=document.getElementById('gate-pwd');
