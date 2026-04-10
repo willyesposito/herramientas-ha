@@ -332,25 +332,18 @@ header .hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 const TIPO_LABELS={1:"Cuotas médico-asistenciales",2:"Seguro de vida/muerte",3:"Donaciones",4:"Intereses hipotecario",5:"Sepelio",7:"Gastos médicos/paramédicos",8:"Servicio doméstico",9:"SGR",10:"Vehículos corredor/viajante",11:"Combustible/nafta",21:"Indumentaria/equipamiento laboral",22:"Alquiler inmueble (40%)",23:"Seguros mixtos/ahorro",24:"Seguro de retiro privado",25:"FCI",32:"Gastos de educación",33:"Alquiler",34:"Alquiler (otro)",99:"Otras deducciones"};
 
 const IMPGAN_GROUPS=[
- {id:'haberes',label:'Haberes / Ingresos',icon:'💰',keys:[
-  {k:'TOT_CON_IMP',l:'Total con impuesto (mes)',dir:'income'},
-  {k:'IG_TOT_C_IM_ST',l:'Total acumulado con impuesto',dir:'income'},
-  {k:'IG_CUOT_PRORRA',l:'Cuota prorrateo',dir:'income'},
-  {k:'IG_SAC_PRES',l:'SAC presunto',dir:'income'},
-  {k:'TOT_SAC_PRORRA',l:'Total SAC prorrateo',dir:'income'},
-  {k:'PREM_PROD_NG',l:'Premios / Producción',dir:'income'},
-  {k:'PLUS_HS_100',l:'Horas extra 100%',dir:'income'},
+ {id:'haberes',label:'Haberes',icon:'💰',keys:[
+  {k:'IG_TOT_C_IM_ST',l:'Total Haberes',dir:'income'},
+  {k:'TOT_SAC_PRORRA',l:'SAC Prorrateo (informativo)',dir:'income'},
+  {k:'IG_SAC_PRES',l:'SAC Presunto (informativo)',dir:'income'},
  ]},
- {id:'aportes',label:'Aportes Legales',icon:'🏛️',keys:[
-  {k:'TOT_JUBILACION',l:'Jubilación',dir:'ded'},
-  {k:'TOT_LEY_19032',l:'Ley 19.032 (PAMI)',dir:'ded'},
-  {k:'TOT_OBRA_SOC',l:'Obra Social',dir:'ded'},
-  {k:'TOT_OTRAS_DED',l:'Otras deducciones legales',dir:'ded'},
-  {k:'JUBILACION',l:'Jubilación (SAC)',dir:'ded'},
-  {k:'LEY_19032',l:'Ley 19.032 (SAC)',dir:'ded'},
-  {k:'OBRA_SOCIAL',l:'Obra Social (SAC)',dir:'ded'},
+ {id:'retenciones',label:'Retenciones / Aportes',icon:'🏛️',keys:[
+  {k:'IG_TOT_JUB_ST',l:'Jubilación',dir:'ded'},
+  {k:'IG_T_19032_ST',l:'PAMI / Ley 19.032',dir:'ded'},
+  {k:'IG_TOT_OB_S_ST',l:'Obra Social',dir:'ded'},
+  {k:'IG_O_DEDUC_REM',l:'Aportes Sindicales',dir:'ded'},
  ]},
- {id:'siradig_ded',label:'Deducciones SIRADIG',icon:'📝',keys:[
+ {id:'deducciones',label:'Deducciones',icon:'📝',keys:[
   {k:'IG_ALQUILER',l:'Alquiler',dir:'ded'},
   {k:'IG_INT_HIP',l:'Intereses hipotecarios',dir:'ded'},
   {k:'IMP_DED_HON_MED',l:'Honorarios médicos',dir:'ded'},
@@ -363,8 +356,6 @@ const IMPGAN_GROUPS=[
   {k:'IG_SEGURO_MIXTO',l:'Seguros mixtos',dir:'ded'},
   {k:'IG_AP_VOL_REM',l:'Aportes voluntarios',dir:'ded'},
   {k:'IG_CMASIS_REMUN',l:'Cuota médico-asistencial',dir:'ded'},
- ]},
- {id:'personales',label:'Deducciones Personales',icon:'👤',keys:[
   {k:'IG_G_NO_IMP',l:'Ganancia No Imponible',dir:'ded'},
   {k:'IG_DED_ESP',l:'Deducción Especial',dir:'ded'},
   {k:'IG_DEDPER_12',l:'Ded. Personales Art.23',dir:'ded'},
@@ -378,11 +369,9 @@ const IMPGAN_GROUPS=[
   {k:'REM_ANT_EMP',l:'Remuneración anterior empleador',dir:'income'},
  ]},
  {id:'impuesto',label:'Impuesto',icon:'🧾',keys:[
-  {k:'BASE_IMPUESTO',l:'Base imponible',dir:'tax'},
-  {k:'IMPUESTO_TOTAL',l:'Impuesto determinado total',dir:'tax'},
   {k:'ACM_IMPUESTO',l:'Impuesto acumulado retenido',dir:'tax'},
   {k:'IMPUESTO',l:'Ajuste final (retención/devolución)',dir:'final'},
-  {k:'IMP_DEB_BAN_ST',l:'Crédito/débito bancario',dir:'ded'},
+  {k:'IMP_DEB_BAN_ST',l:'Pagos a cuenta (Art. 35)',dir:'ded'},
  ]},
 ];
 
@@ -402,6 +391,8 @@ const COLUMN_ALIASES={
  IG_SAC_PRES:['IG_SAC_PRES'],TOT_SAC_PRORRA:['TOT_SAC_PRORRA'],
  TOT_JUBILACION:['TOT_JUBILACION'],TOT_LEY_19032:['TOT_LEY_19032'],TOT_OBRA_SOC:['TOT_OBRA_SOC'],
  TOT_OTRAS_DED:['TOT_OTRAS_DED'],JUBILACION:['JUBILACION'],LEY_19032:['LEY_19032'],OBRA_SOCIAL:['OBRA_SOCIAL'],
+ IG_TOT_JUB_ST:['IG_TOT_JUB_ST'],IG_T_19032_ST:['IG_T_19032_ST'],
+ IG_TOT_OB_S_ST:['IG_TOT_OB_S_ST'],IG_O_DEDUC_REM:['IG_O_DEDUC_REM'],
  IG_ALQUILER:['IG_ALQUILER'],IG_INT_HIP:['IG_INT_HIP','INT_CRED_HIPOT'],
  IMP_DED_HON_MED:['IMP_DED_HON_MED'],DED_SER_DOM_ST:['DED_SER_DOM_ST','IG_SERV_DOMES'],
  GASTOS_EDUC:['GASTOS_EDUC'],IG_DONAC_REMUN:['IG_DONAC_REMUN'],IG_SEGURO_REMUN:['IG_SEGURO_REMUN'],
@@ -655,115 +646,109 @@ function parseZip(zipFile){
    INSIGHT ENGINE
    ═══════════════════════════════════════════ */
 function generateInsights(emp){
- const insights=[];
  const dic=emp.dic||{};
  const anual=emp.anual||{};
- const sd=emp.siradig_dic;
  const sa=emp.siradig_anual;
+ const impuesto=anual.IMPUESTO||0;
+ const saldoAnual=(anual.IMP_DEB_BAN_ST||0)-impuesto;
 
- // Rule 1-3: SIRADIG deduction changes
- if(sd||sa){
-  const allTipos=new Set([...Object.keys(sd?.deducciones||{}),...Object.keys(sa?.deducciones||{})]);
-  for(const t of allTipos){
-   const tipo=parseInt(t);
-   const vd=(sd?.deducciones||{})[tipo]||0;
-   const va=(sa?.deducciones||{})[tipo]||0;
-   const label=TIPO_LABELS[tipo]||('Tipo '+tipo);
-   if(vd>0&&va===0){
-    insights.push({type:'unfavorable',text:`Dejó de declarar ${label} ($${fmt(vd)}) en el SIRADIG anual. Se espera mayor retención.`});
-   } else if(vd===0&&va>0){
-    insights.push({type:'favorable',text:`Agregó ${label} ($${fmt(va)}) en el SIRADIG anual. Se espera menor retención.`});
-   } else if(vd>0&&va>0&&abs(va-vd)>100){
-    const dir=va>vd?'favorable':'unfavorable';
-    insights.push({type:dir,text:`${label}: cambió de $${fmt(vd)} a $${fmt(va)} (dif: $${fmt(va-vd)}). ${dir==='favorable'?'Reduce':'Aumenta'} base imponible.`});
-   }
-  }
-  // Cargas de familia
-  const cDic=(sd?.cargasFamilia||[]).length;
-  const cAnu=(sa?.cargasFamilia||[]).length;
-  if(cAnu>cDic)insights.push({type:'favorable',text:`Sumó ${cAnu-cDic} carga(s) de familia. Se espera menor retención.`});
-  if(cAnu<cDic)insights.push({type:'unfavorable',text:`Quitó ${cDic-cAnu} carga(s) de familia. Se espera mayor retención.`});
-  // Otros empleadores
-  const oeDic=(sd?.ganLiqOtros||[]).length;
-  const oeAnu=(sa?.ganLiqOtros||[]).length;
-  if(oeAnu>oeDic)insights.push({type:'unfavorable',text:`Declaró ${oeAnu-oeDic} empleador(es) adicional(es). Base imponible sube.`});
+ const reasons_up=[];   // factors that increase impuesto (unfavorable)
+ const reasons_down=[]; // factors that decrease impuesto (favorable)
+ const warnTexts=[];
+
+ // 1. Haberes
+ const habDif=(anual.IG_TOT_C_IM_ST||0)-(dic.IG_TOT_C_IM_ST||0);
+ if(abs(habDif)>1000){
+  if(habDif>0)reasons_up.push(`Haberes +$${fmt(habDif)}`);
+  else reasons_down.push(`Haberes -$${fmt(abs(habDif))}`);
  }
 
- // Rule 4: IMPGAN personal deduction changes
- const hijDif=(anual.IG_HIJOS_REM||0)-(dic.IG_HIJOS_REM||0);
- if(abs(hijDif)>100){
-  insights.push({type:hijDif>0?'favorable':'unfavorable',
-   text:`Deducción por hijos ${hijDif>0?'aumentó':'disminuyó'} $${fmt(abs(hijDif))}. ${hijDif>0?'Menor':'Mayor'} retención esperada.`});
- }
- const conyDif=(anual.IG_CONYUGE_REM||0)-(dic.IG_CONYUGE_REM||0);
- if(abs(conyDif)>100){
-  insights.push({type:conyDif>0?'favorable':'unfavorable',
-   text:`Deducción por cónyuge ${conyDif>0?'aumentó':'disminuyó'} $${fmt(abs(conyDif))}.`});
+ // 2. Retenciones (más aportes = menos base = menos impuesto)
+ const retDic=(dic.IG_TOT_JUB_ST||0)+(dic.IG_T_19032_ST||0)+(dic.IG_TOT_OB_S_ST||0)+(dic.IG_O_DEDUC_REM||0);
+ const retAnual=(anual.IG_TOT_JUB_ST||0)+(anual.IG_T_19032_ST||0)+(anual.IG_TOT_OB_S_ST||0)+(anual.IG_O_DEDUC_REM||0);
+ const retDif=retAnual-retDic;
+ if(abs(retDif)>500){
+  if(retDif>0)reasons_down.push(`Aportes legales +$${fmt(retDif)}`);
+  else reasons_up.push(`Aportes legales -$${fmt(abs(retDif))}`);
  }
 
- // Rule 5: Other employer income
+ // 3. Deducciones totales (SIRADIG + personales desde IMPGAN)
+ const dedCols=['IG_ALQUILER','IG_INT_HIP','IMP_DED_HON_MED','DED_SER_DOM_ST','GASTOS_EDUC',
+  'IG_DONAC_REMUN','IG_SEGURO_REMUN','IG_SEPELIO_REM','IG_RETIRO_REMUN','IG_SEGURO_MIXTO',
+  'IG_AP_VOL_REM','IG_CMASIS_REMUN','IG_G_NO_IMP','IG_DED_ESP','IG_DEDPER_12',
+  'IG_CONYUGE_REM','IG_HIJOS_REM','IG_OCARGAS_REM'];
+ const dedDic=dedCols.reduce((s,k)=>s+(dic[k]||0),0);
+ const dedAnual=dedCols.reduce((s,k)=>s+(anual[k]||0),0);
+ const dedDif=dedAnual-dedDic;
+ if(abs(dedDif)>500){
+  if(dedDif>0)reasons_down.push(`Deducciones +$${fmt(dedDif)}`);
+  else reasons_up.push(`Deducciones -$${fmt(abs(dedDif))}`);
+ }
+
+ // 4. Otros empleadores
  const basAntDif=(anual.BASE_ANT_EMP||0)-(dic.BASE_ANT_EMP||0);
- if(abs(basAntDif)>100){
-  insights.push({type:basAntDif>0?'unfavorable':'favorable',
-   text:`Remuneración de otro empleador ${basAntDif>0?'aumentó':'disminuyó'} $${fmt(abs(basAntDif))}. Base imponible ${basAntDif>0?'sube':'baja'}.`});
+ if(abs(basAntDif)>500){
+  if(basAntDif>0)reasons_up.push(`Otro empleador +$${fmt(basAntDif)}`);
+  else reasons_down.push(`Otro empleador -$${fmt(abs(basAntDif))}`);
  }
 
- // Rule 6: Income change
- const incDif=(anual.IG_TOT_C_IM_ST||0)-(dic.IG_TOT_C_IM_ST||0);
- if(abs(incDif)>1000){
-  insights.push({type:'info',text:`Haberes acumulados variaron $${fmt(incDif)} (${incDif>0?'aumento':'disminución'}).`});
- }
-
- // Rule 7: GNI / Deduccion Especial
- const gniDif=(anual.IG_G_NO_IMP||0)-(dic.IG_G_NO_IMP||0);
- if(abs(gniDif)>100){
-  insights.push({type:gniDif>0?'favorable':'unfavorable',
-   text:`Ganancia No Imponible cambió $${fmt(gniDif)}. ${gniDif>0?'Reduce':'Aumenta'} base imponible.`});
- }
- const dedEspDif=(anual.IG_DED_ESP||0)-(dic.IG_DED_ESP||0);
- if(abs(dedEspDif)>100){
-  insights.push({type:dedEspDif>0?'favorable':'unfavorable',
-   text:`Deducción Especial cambió $${fmt(dedEspDif)}.`});
- }
-
- // Rule 8: Cross-reference SIRADIG vs IMPGAN
- if(sa&&anual){
+ // 5. SIRADIG cross-reference warnings
+ if(sa){
   for(const [tipo,impKey] of Object.entries(SIRADIG_IMPGAN_MAP)){
    const sVal=sa.deducciones?.[parseInt(tipo)]||0;
    const iVal=anual[impKey]||0;
-   if(sVal>1000&&iVal===0){
-    insights.push({type:'warning',text:`SIRADIG declara ${TIPO_LABELS[parseInt(tipo)]} por $${fmt(sVal)} pero el IMPGAN no lo refleja. Posible error de liquidación.`});
-   }
+   if(sVal>1000&&iVal===0)
+    warnTexts.push(`SIRADIG declara ${TIPO_LABELS[parseInt(tipo)]} por $${fmt(sVal)} pero IMPGAN no lo refleja.`);
   }
  }
 
- // Rule 9: Large IMPUESTO swing
- const impDif=(anual.IMPUESTO||0)-(dic.IMPUESTO||0);
- if(abs(impDif)>50000){
-  const factors=identifyTopFactors(dic,anual);
-  insights.push({type:impDif<0?'favorable':'unfavorable',
-   text:`Ajuste significativo en impuesto: $${fmt(impDif)}. Principales factores: ${factors.join(', ')}.`});
+ // 6. Baja con ajuste
+ if(emp.isBaja&&abs(impuesto)>100)
+  warnTexts.push(`Empleado con baja registrada y ajuste de impuesto $${fmt(impuesto)}. Verificar liquidación final.`);
+
+ // Build insights (max 2)
+ const insights=[];
+ let coherencia;
+ const allReasons=[...reasons_up,...reasons_down];
+ const saldoText=abs(impuesto)<0.01?'Sin ajuste de impuesto.'
+  :saldoAnual>=0?`Saldo a favor: $${fmt(saldoAnual)}.`:`Saldo en contra: $${fmt(abs(saldoAnual))}.`;
+
+ if(warnTexts.length){
+  const extra=allReasons.length?` Factores: ${allReasons.join(', ')}.`:'';
+  insights.push({type:'warning',text:warnTexts.join(' ')+extra});
+  coherencia='inconsistente';
+ } else if(allReasons.length){
+  const netIsUp=reasons_up.length>=reasons_down.length;
+  const impIsUp=impuesto>0;
+  const isCoherent=abs(impuesto)<100||(netIsUp===impIsUp);
+  const tipo=reasons_up.length>reasons_down.length?'unfavorable':'favorable';
+  let txt='';
+  if(reasons_up.length&&reasons_down.length)
+   txt=`Sube por: ${reasons_up.join(', ')}; baja por: ${reasons_down.join(', ')}. ${saldoText}`;
+  else if(reasons_up.length)
+   txt=`Base imponible sube por: ${reasons_up.join(', ')}. ${saldoText}`;
+  else
+   txt=`Base imponible baja por: ${reasons_down.join(', ')}. ${saldoText}`;
+  insights.push({type:isCoherent?tipo:'warning',text:txt});
+  coherencia=isCoherent?'coherente':'revisar';
+ } else if(abs(impuesto)>100){
+  insights.push({type:'info',text:`Ajuste sin cambios identificables en los datos cargados. ${saldoText}`});
+  coherencia='revisar';
+ } else {
+  coherencia='coherente';
  }
 
- // Rule 10: Baja employee with adjustment
- if(emp.nomina&&!emp.nomina.activo&&abs(impDif)>100){
-  insights.push({type:'warning',text:`Empleado dado de baja con ajuste de impuesto $${fmt(impDif)}. Verificar liquidación final.`});
+ // Insight 2: pagos a cuenta (solo si hay valor)
+ const pagosCuenta=anual.IMP_DEB_BAN_ST||0;
+ if(abs(pagosCuenta)>0.01){
+  const sf=pagosCuenta-impuesto;
+  insights.push({
+   type:sf>=0?'favorable':'unfavorable',
+   text:`Pagos a cuenta (Art. 35): $${fmt(pagosCuenta)}. Saldo final ${sf>=0?'a favor: $'+fmt(sf):'en contra: $'+fmt(abs(sf))}.`
+  });
  }
 
- return insights;
-}
-
-function identifyTopFactors(dic,anual){
- const deltas=[];
- for(const g of IMPGAN_GROUPS){
-  if(g.id==='impuesto')continue;
-  for(const col of g.keys){
-   const d=(anual[col.k]||0)-(dic[col.k]||0);
-   if(abs(d)>100)deltas.push({label:col.l,dif:d,abs:abs(d)});
-  }
- }
- deltas.sort((a,b)=>b.abs-a.abs);
- return deltas.slice(0,3).map(d=>`${d.label} ${d.dif>0?'+':''}${fmt(d.dif)}`);
+ return{insights,coherencia};
 }
 
 /* ═══════════════════════════════════════════
@@ -838,6 +823,31 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
   const name=nom?nom.fullName:(anual.NOMBRE||dic.NOMBRE||'Empleado '+id);
   const empresa=anual.N_EMPRESA||dic.N_EMPRESA||'';
 
+  // Baja detection: ID first, CUIL fallback, IMPGAN last
+  const nomByCuil=!nom&&cuil?nomina.byCuil[cuil]||null:null;
+  const nominaData=nom||nomByCuil;
+  const isBaja=nominaData?!nominaData.activo:!!(dic.FECHA_BAJA||anual.FECHA_BAJA);
+
+  // Computed fields per period
+  const computed={
+   dic:{
+    totalHaberes:dic.IG_TOT_C_IM_ST||0,
+    totalSAC:(dic.TOT_SAC_PRORRA||0)+(dic.IG_SAC_PRES||0),
+    totalRetenciones:(dic.IG_TOT_JUB_ST||0)+(dic.IG_T_19032_ST||0)+(dic.IG_TOT_OB_S_ST||0)+(dic.IG_O_DEDUC_REM||0),
+    impuestoRetenido:(dic.ACM_IMPUESTO||0)+(dic.IMPUESTO||0),
+    pagosCuenta:dic.IMP_DEB_BAN_ST||0,
+    saldoFinal:(dic.IMP_DEB_BAN_ST||0)-(dic.IMPUESTO||0),
+   },
+   anual:{
+    totalHaberes:anual.IG_TOT_C_IM_ST||0,
+    totalSAC:(anual.TOT_SAC_PRORRA||0)+(anual.IG_SAC_PRES||0),
+    totalRetenciones:(anual.IG_TOT_JUB_ST||0)+(anual.IG_T_19032_ST||0)+(anual.IG_TOT_OB_S_ST||0)+(anual.IG_O_DEDUC_REM||0),
+    impuestoRetenido:(anual.ACM_IMPUESTO||0)+(anual.IMPUESTO||0),
+    pagosCuenta:anual.IMP_DEB_BAN_ST||0,
+    saldoFinal:(anual.IMP_DEB_BAN_ST||0)-(anual.IMPUESTO||0),
+   }
+  };
+
   // Calculate differences for all IMPGAN groups
   const diffs={};
   let hasChange=false;
@@ -871,28 +881,23 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
    id,name,empresa,cuil,
    dic,anual,diffs,siradigDiffs,
    siradig_dic:siradigD,siradig_anual:siradigA,
-   nomina:nom,
-   hasChange,
-   impuestoDif,
-   insights:[]
+   nomina:nom,isBaja,computed,
+   hasChange,impuestoDif,
+   insights:[],coherencia:'coherente'
   };
-  emp.insights=generateInsights(emp);
-
-  // Classify: ok / review / warn
-  const hasWarning=emp.insights.some(i=>i.type==='warning');
-  const hasAdjust=abs(impuestoDif)>100;
-  if(!hasChange&&!hasAdjust)emp.status='ok';
-  else if(hasWarning)emp.status='warn';
-  else emp.status='review';
+  const insResult=generateInsights(emp);
+  emp.insights=insResult.insights;
+  emp.coherencia=insResult.coherencia;
+  emp.status=emp.coherencia; // used by filter dropdown
 
   employees.push(emp);
  }
 
  employees.sort((a,b)=>abs(b.impuestoDif)-abs(a.impuestoDif));
 
- const okCount=employees.filter(e=>e.status==='ok').length;
- const reviewCount=employees.filter(e=>e.status==='review').length;
- const warnCount=employees.filter(e=>e.status==='warn').length;
+ const okCount=employees.filter(e=>e.coherencia==='coherente').length;
+ const reviewCount=employees.filter(e=>e.coherencia==='revisar').length;
+ const warnCount=employees.filter(e=>e.coherencia==='inconsistente').length;
  const totalAjuste=employees.reduce((s,e)=>s+e.impuestoDif,0);
  const maxRet=employees.reduce((m,e)=>e.impuestoDif>m.val?{val:e.impuestoDif,name:e.name}:m,{val:0,name:'-'});
  const maxDev=employees.reduce((m,e)=>e.impuestoDif<m.val?{val:e.impuestoDif,name:e.name}:m,{val:0,name:'-'});
@@ -922,22 +927,22 @@ function showGauge(){
  // Battery
  const bat=document.getElementById('gauge-battery');
  bat.innerHTML='';
- if(pOk>0)bat.innerHTML+=`<div class="gauge-seg seg-ok" style="width:${pOk}%"><span class="g-pct">${pOk}%</span><span class="g-label">OK</span></div>`;
- if(pRev>0)bat.innerHTML+=`<div class="gauge-seg seg-review" style="width:${pRev}%"><span class="g-pct">${pRev}%</span><span class="g-label">Revisar</span></div>`;
- if(pWarn>0)bat.innerHTML+=`<div class="gauge-seg seg-warn" style="width:${pWarn}%"><span class="g-pct">${pWarn}%</span><span class="g-label">Alerta</span></div>`;
+ if(pOk>0)bat.innerHTML+=`<div class="gauge-seg seg-ok" style="width:${pOk}%"><span class="g-pct">${pOk}%</span><span class="g-label">Coherente</span></div>`;
+ if(pRev>0)bat.innerHTML+=`<div class="gauge-seg seg-review" style="width:${pRev}%"><span class="g-pct">${pRev}%</span><span class="g-label">A revisar</span></div>`;
+ if(pWarn>0)bat.innerHTML+=`<div class="gauge-seg seg-warn" style="width:${pWarn}%"><span class="g-pct">${pWarn}%</span><span class="g-label">Inconsistente</span></div>`;
 
  // Legend
  document.getElementById('gauge-legend').innerHTML=`
-  <div class="gauge-legend-item ok"><div class="legend-dot"></div><span class="legend-n">${s.ok}</span> Sin cambios</div>
-  <div class="gauge-legend-item review"><div class="legend-dot"></div><span class="legend-n">${s.review}</span> Con ajuste</div>
-  <div class="gauge-legend-item warn"><div class="legend-dot"></div><span class="legend-n">${s.warn}</span> Inconsistencias</div>
+  <div class="gauge-legend-item ok"><div class="legend-dot"></div><span class="legend-n">${s.ok}</span> Coherentes</div>
+  <div class="gauge-legend-item review"><div class="legend-dot"></div><span class="legend-n">${s.review}</span> A revisar</div>
+  <div class="gauge-legend-item warn"><div class="legend-dot"></div><span class="legend-n">${s.warn}</span> Inconsistentes</div>
  `;
 
  // Detail cards
  document.getElementById('gauge-detail').innerHTML=`
-  <div class="gauge-detail-card ok"><div class="gd-icon">✅</div><div class="gd-val">${s.ok}</div><div class="gd-label">Liquidados OK</div></div>
+  <div class="gauge-detail-card ok"><div class="gd-icon">✅</div><div class="gd-val">${s.ok}</div><div class="gd-label">Coherentes</div></div>
   <div class="gauge-detail-card review"><div class="gd-icon">🔍</div><div class="gd-val">${s.review}</div><div class="gd-label">A revisar</div></div>
-  <div class="gauge-detail-card warn"><div class="gd-icon">⚠️</div><div class="gd-val">${s.warn}</div><div class="gd-label">Con alertas</div></div>
+  <div class="gauge-detail-card warn"><div class="gd-icon">⚠️</div><div class="gd-val">${s.warn}</div><div class="gd-label">Inconsistentes</div></div>
   <div class="gauge-detail-card" style="border-color:var(--cyan)"><div class="gd-icon">💲</div><div class="gd-val" style="color:${_APP.stats.totalAjuste>=0?'var(--red)':'var(--green)'};font-size:18px">$${fmt(_APP.stats.totalAjuste)}</div><div class="gd-label">Ajuste neto total</div></div>
  `;
 }
@@ -958,12 +963,12 @@ function renderApp(){
  // Stats bar
  document.getElementById('stats-bar').innerHTML=`
   <div class="stat-item"><div class="s-label">Total empleados</div><div class="s-val">${s.total}</div></div>
-  <div class="stat-item"><div class="s-label">Con ajuste</div><div class="s-val warn">${s.review+s.warn}</div></div>
-  <div class="stat-item"><div class="s-label">Sin cambios</div><div class="s-val green">${s.ok}</div></div>
+  <div class="stat-item"><div class="s-label">Coherentes</div><div class="s-val green">${s.ok}</div></div>
+  <div class="stat-item"><div class="s-label">A revisar</div><div class="s-val warn">${s.review}</div></div>
   <div class="stat-item"><div class="s-label">Ajuste neto</div><div class="s-val ${s.totalAjuste>=0?'red':'green'}" style="font-size:18px">$${fmt(s.totalAjuste)}</div></div>
   <div class="stat-item"><div class="s-label">Mayor retención</div><div class="s-val red" style="font-size:15px">$${fmt(s.maxRet.val)}</div><div class="s-name" style="font-size:11px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.maxRet.name}</div></div>
   <div class="stat-item"><div class="s-label">Mayor devolución</div><div class="s-val green" style="font-size:15px">$${fmt(s.maxDev.val)}</div><div class="s-name" style="font-size:11px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.maxDev.name}</div></div>
-  <div class="stat-item"><div class="s-label">Alertas</div><div class="s-val ${s.warn>0?'red':'muted'}">${s.warn}</div></div>
+  <div class="stat-item"><div class="s-label">Inconsistentes</div><div class="s-val ${s.warn>0?'red':'muted'}">${s.warn}</div></div>
  `;
 
  // Tabs
@@ -1001,9 +1006,9 @@ function renderEmps(){
    <input class="main-search" placeholder="Buscar por nombre, legajo o empresa…" oninput="filterEmps()">
    <select onchange="filterEmps()">
     <option value="">Todos</option>
-    <option value="ok">Sin cambios</option>
-    <option value="review">Con ajuste</option>
-    <option value="warn">Con alertas</option>
+    <option value="coherente">Coherentes</option>
+    <option value="revisar">A revisar</option>
+    <option value="inconsistente">Inconsistentes</option>
    </select>
    <span class="fc-count" id="emp-count"></span>
   </div>
@@ -1050,76 +1055,140 @@ function renderEmpList(){
 function filterEmps(){_PAGE=0;renderEmpList();}
 
 function buildCard(emp){
- const badgeCls=emp.status==='ok'?'badge-ok':emp.status==='warn'?'badge-warn':'badge-review';
  const initials=emp.name.split(/[\s,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
- const isBaja=emp.nomina&&!emp.nomina.activo;
- const impDif=emp.impuestoDif;
- const difCls=abs(impDif)<0.01?'zero':impDif>0?'neg':'pos';
- const statusPill=emp.status==='ok'?'<span class="status-pill status-sin">Sin cambios</span>'
-  :emp.status==='warn'?'<span class="status-pill" style="background:#ffebee;color:var(--red)">Con alertas</span>'
-  :'<span class="status-pill status-con">Con ajuste</span>';
+ const badgeCls=emp.coherencia==='inconsistente'?'badge-warn':emp.coherencia==='revisar'?'badge-review':'badge-ok';
+ const isBaja=emp.isBaja;
+ const c=emp.computed;
+ const cardId='card-'+emp.id;
 
+ // Status pill
+ const statusPill=emp.coherencia==='coherente'
+  ?'<span class="status-pill status-sin">Coherente</span>'
+  :emp.coherencia==='inconsistente'
+  ?'<span class="status-pill" style="background:#ffebee;color:var(--red)">Inconsistente</span>'
+  :'<span class="status-pill status-con">A revisar</span>';
+
+ // Pills
  let pills='';
  if(isBaja)pills+='<span class="pill pill-baja">Baja</span>';
  if(emp.siradig_dic||emp.siradig_anual)pills+='<span class="pill pill-info">SIRADIG</span>';
  if(emp.insights.some(i=>i.type==='warning'))pills+='<span class="pill pill-warn">!</span>';
 
+ // Meta
  let meta='';
  if(emp.empresa)meta+=`<span class="mpill">${emp.empresa}</span>`;
  if(emp.nomina?.categoria)meta+=`<span class="mpill">${emp.nomina.categoria}</span>`;
  if(emp.cuil)meta+=`<span class="mpill">CUIL ${emp.cuil}</span>`;
  meta+=`<span class="mpill">Leg. ${emp.id}</span>`;
 
- const cardId='card-'+emp.id;
- let body='';
+ // Header number: anual IMPUESTO (the recalculation adjustment)
+ const headerImp=emp.anual?.IMPUESTO||0;
+ const headerCls=abs(headerImp)<0.01?'zero':headerImp>0?'neg':'pos';
+ const headerLabel=abs(headerImp)<0.01?'Sin ajuste':'$'+(headerImp>0?'+':'')+fmt(headerImp);
 
- // IMPGAN comparison
- for(const g of IMPGAN_GROUPS){
-  const rows=g.keys.filter(col=>{
-   const d=emp.diffs[col.k];
-   return d&&(abs(d.dic)>0.01||abs(d.anual)>0.01);
-  });
-  if(!rows.length)continue;
-  const gid=cardId+'-'+g.id;
-  body+=`<div class="group-header" onclick="toggleGroup('${gid}')">`+
-   `<span class="gh-icon">${g.icon}</span>${g.label}<span class="gh-chev">▼</span></div>`;
-  body+=`<div class="group-content" id="${gid}">`;
-  body+=`<table class="ded-table"><thead><tr><th>Concepto</th><th>Diciembre</th><th>Anual</th><th>Diferencia</th></tr></thead><tbody>`;
-  let tDic=0,tAnu=0,tDif=0;
-  for(const col of rows){
-   const d=emp.diffs[col.k];
-   const rc=rowClass(col.k,d.dif);
-   const dc=difClass(col.k,d.dif);
-   body+=`<tr class="${rc}"><td class="rubro-name">${col.l}</td><td class="num">${fmt(d.dic)}</td><td class="num">${fmt(d.anual)}</td><td class="${dc}">${d.dif>0?'+':''}${fmt(d.dif)}</td></tr>`;
-   tDic+=d.dic;tAnu+=d.anual;tDif+=d.dif;
-  }
-  body+=`</tbody><tfoot><tr><td style="font-weight:700">Total ${g.label}</td><td class="num" style="font-weight:700">${fmt(tDic)}</td><td class="num" style="font-weight:700">${fmt(tAnu)}</td><td class="num" style="font-weight:700">${tDif>0?'+':''}${fmt(tDif)}</td></tr></tfoot></table>`;
-  body+=`</div>`;
+ // First insight for header subtitle
+ const firstInsightText=emp.insights[0]?.text||'';
+ const headerInsight=firstInsightText
+  ?`<div style="font-size:11px;color:var(--gray);margin-top:4px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px">${firstInsightText}</div>`:'';
+
+ // ── ZONE A: Impuesto (always visible, non-collapsible) ──
+ const impRetDic=c.dic.impuestoRetenido, impRetAnual=c.anual.impuestoRetenido, impRetDif=impRetAnual-impRetDic;
+ const pagDic=c.dic.pagosCuenta, pagAnual=c.anual.pagosCuenta, pagDif=pagAnual-pagDic;
+ const saldoDic=c.dic.saldoFinal, saldoAnual=c.anual.saldoFinal, saldoDif=saldoAnual-saldoDic;
+ const dc=(v,pos,neg)=>abs(v)<0.01?'dif-zero':v>0?pos:neg;
+ const saldoPill=abs(saldoAnual)<0.01?''
+  :saldoAnual>0?'<span class="pill pill-ok" style="font-size:12px;padding:3px 10px">Saldo a favor</span>'
+  :'<span class="pill" style="background:#ffebee;color:var(--red);font-size:12px;padding:3px 10px">Saldo en contra</span>';
+
+ let zoneA=`<div style="padding:14px 18px 12px;background:#f8fafc;border-bottom:1.5px solid var(--border)">`;
+ zoneA+=`<div style="font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🧾 Impuesto</div>`;
+ zoneA+=`<table class="ded-table"><thead><tr><th>Concepto</th><th>Diciembre</th><th>Anual</th><th>Diferencia</th></tr></thead><tbody>`;
+ zoneA+=`<tr><td class="rubro-name">Impuesto Retenido <span style="color:var(--gray);font-size:11px">(Acum. + Ajuste)</span></td><td class="num">${fmt(impRetDic)}</td><td class="num">${fmt(impRetAnual)}</td><td class="${dc(impRetDif,'dif-neg','dif-pos')}">${impRetDif>0?'+':''}${fmt(impRetDif)}</td></tr>`;
+ if(abs(pagDic)>0.01||abs(pagAnual)>0.01)
+  zoneA+=`<tr><td class="rubro-name">(-) Pagos a cuenta <span style="color:var(--gray);font-size:11px">(Art. 35)</span></td><td class="num">${fmt(pagDic)}</td><td class="num">${fmt(pagAnual)}</td><td class="${dc(pagDif,'dif-pos','dif-neg')}">${pagDif>0?'+':''}${fmt(pagDif)}</td></tr>`;
+ zoneA+=`<tr style="background:#eef6ee"><td style="font-weight:800;color:var(--navy)">Saldo final</td><td class="num" style="font-weight:700">${fmt(saldoDic)}</td><td class="num" style="font-weight:700">${fmt(saldoAnual)}</td><td class="${dc(saldoDif,'dif-pos','dif-neg')}" style="font-weight:800">${saldoDif>0?'+':''}${fmt(saldoDif)}</td></tr>`;
+ zoneA+=`</tbody></table>`;
+ if(saldoPill)zoneA+=`<div style="margin-top:10px">${saldoPill}</div>`;
+ zoneA+=`</div>`;
+
+ // ── ZONE B: Resumen IG (collapsible) ──
+ const zbId=cardId+'-zb';
+ let zoneB=`<div class="group-header" onclick="toggleGroup('${zbId}')"><span class="gh-icon">📊</span>Resumen IG<span class="gh-chev">▼</span></div>`;
+ zoneB+=`<div class="group-content" id="${zbId}">`;
+
+ // Sub: Haberes
+ const habDic=c.dic.totalHaberes, habAnual=c.anual.totalHaberes, habDif=habAnual-habDic;
+ const sacDic=c.dic.totalSAC, sacAnual=c.anual.totalSAC;
+ zoneB+=`<div style="padding:7px 18px 4px;font-size:11px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;background:#fafcfd;border-bottom:1px solid var(--border)">Haberes</div>`;
+ zoneB+=`<table class="ded-table"><tbody>`;
+ zoneB+=`<tr><td class="rubro-name">Total Haberes</td><td class="num">${fmt(habDic)}</td><td class="num">${fmt(habAnual)}</td><td class="${dc(habDif,'dif-neg','dif-pos')}">${habDif>0?'+':''}${fmt(habDif)}</td></tr>`;
+ if(abs(sacDic)>0.01||abs(sacAnual)>0.01)
+  zoneB+=`<tr><td class="rubro-name" style="color:var(--gray)">SAC <span style="font-size:11px">(informativo)</span></td><td class="num" style="color:var(--gray)">${fmt(sacDic)}</td><td class="num" style="color:var(--gray)">${fmt(sacAnual)}</td><td class="dif-zero">${fmt(sacAnual-sacDic)}</td></tr>`;
+ zoneB+=`</tbody></table>`;
+
+ // Sub: Retenciones
+ const retKeys=[{k:'IG_TOT_JUB_ST',l:'Jubilación'},{k:'IG_T_19032_ST',l:'PAMI / Ley 19.032'},{k:'IG_TOT_OB_S_ST',l:'Obra Social'},{k:'IG_O_DEDUC_REM',l:'Aportes Sindicales'}];
+ const retRows=retKeys.map(r=>({l:r.l,d:emp.dic[r.k]||0,a:emp.anual[r.k]||0})).filter(r=>abs(r.d)>0.01||abs(r.a)>0.01);
+ if(retRows.length){
+  zoneB+=`<div style="padding:7px 18px 4px;font-size:11px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;background:#fafcfd;border-bottom:1px solid var(--border)">Retenciones / Aportes</div>`;
+  zoneB+=`<table class="ded-table"><tbody>`;
+  let tRd=0,tRa=0;
+  for(const r of retRows){const df=r.a-r.d;tRd+=r.d;tRa+=r.a;zoneB+=`<tr><td class="rubro-name">${r.l}</td><td class="num">${fmt(r.d)}</td><td class="num">${fmt(r.a)}</td><td class="${dc(df,'dif-pos','dif-neg')}">${df>0?'+':''}${fmt(df)}</td></tr>`;}
+  const tRf=tRa-tRd;
+  zoneB+=`</tbody><tfoot><tr><td style="font-weight:700">Total Retenciones</td><td class="num" style="font-weight:700">${fmt(tRd)}</td><td class="num" style="font-weight:700">${fmt(tRa)}</td><td class="${dc(tRf,'dif-pos','dif-neg')}" style="font-weight:700">${tRf>0?'+':''}${fmt(tRf)}</td></tr></tfoot></table>`;
  }
 
- // SIRADIG comparison
+ // Sub: Deducciones (only rows with any value)
+ const dedKeys=[
+  {k:'IG_ALQUILER',l:'Alquiler'},{k:'IG_INT_HIP',l:'Intereses hipotecarios'},{k:'IMP_DED_HON_MED',l:'Honorarios médicos'},
+  {k:'DED_SER_DOM_ST',l:'Servicio doméstico'},{k:'GASTOS_EDUC',l:'Gastos de educación'},{k:'IG_DONAC_REMUN',l:'Donaciones'},
+  {k:'IG_SEGURO_REMUN',l:'Seguros de vida'},{k:'IG_SEPELIO_REM',l:'Sepelio'},{k:'IG_RETIRO_REMUN',l:'Seguro de retiro'},
+  {k:'IG_SEGURO_MIXTO',l:'Seguros mixtos'},{k:'IG_AP_VOL_REM',l:'Aportes voluntarios'},{k:'IG_CMASIS_REMUN',l:'Cuota médico-asistencial'},
+  {k:'IG_G_NO_IMP',l:'Ganancia No Imponible'},{k:'IG_DED_ESP',l:'Deducción Especial'},{k:'IG_DEDPER_12',l:'Ded. Personales Art.23'},
+  {k:'IG_CONYUGE_REM',l:'Cónyuge'},{k:'IG_HIJOS_REM',l:'Hijos'},{k:'IG_OCARGAS_REM',l:'Otras cargas de familia'},
+ ];
+ const dedRows=dedKeys.map(r=>({l:r.l,d:emp.dic[r.k]||0,a:emp.anual[r.k]||0})).filter(r=>abs(r.d)>0.01||abs(r.a)>0.01);
+ if(dedRows.length){
+  zoneB+=`<div style="padding:7px 18px 4px;font-size:11px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;background:#fafcfd;border-bottom:1px solid var(--border)">Deducciones</div>`;
+  zoneB+=`<table class="ded-table"><tbody>`;
+  for(const r of dedRows){const df=r.a-r.d;const rc=abs(df)<0.01?'':(df>0?'row-pos':'row-neg');zoneB+=`<tr class="${rc}"><td class="rubro-name">${r.l}</td><td class="num">${fmt(r.d)}</td><td class="num">${fmt(r.a)}</td><td class="${dc(df,'dif-pos','dif-neg')}">${df>0?'+':''}${fmt(df)}</td></tr>`;}
+  zoneB+=`</tbody></table>`;
+ }
+
+ // Sub: Otros Empleadores (only if has data)
+ const otrosKeys=[{k:'BASE_ANT_EMP',l:'Base anterior empleador'},{k:'IMP_ANT_EMP',l:'Impuesto anterior empleador'},{k:'REM_ANT_EMP',l:'Remuneración anterior empleador'}];
+ const otrosRows=otrosKeys.map(r=>({l:r.l,d:emp.dic[r.k]||0,a:emp.anual[r.k]||0})).filter(r=>abs(r.d)>0.01||abs(r.a)>0.01);
+ if(otrosRows.length){
+  zoneB+=`<div style="padding:7px 18px 4px;font-size:11px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;background:#fafcfd;border-bottom:1px solid var(--border)">Otros Empleadores</div>`;
+  zoneB+=`<table class="ded-table"><tbody>`;
+  for(const r of otrosRows){const df=r.a-r.d;zoneB+=`<tr><td class="rubro-name">${r.l}</td><td class="num">${fmt(r.d)}</td><td class="num">${fmt(r.a)}</td><td class="${dc(df,'dif-neg','dif-pos')}">${df>0?'+':''}${fmt(df)}</td></tr>`;}
+  zoneB+=`</tbody></table>`;
+ }
+ zoneB+=`</div>`;
+
+ // ── ZONE C: SIRADIG (collapsible, only if loaded) ──
+ let zoneC='';
  if(emp.siradigDiffs&&Object.keys(emp.siradigDiffs).length){
-  body+=`<div class="section-title"><span class="st-icon">📁</span>SIRADIG — Deducciones declaradas</div>`;
-  body+=`<table class="ded-table"><thead><tr><th>Rubro</th><th>Diciembre</th><th>Anual</th><th>Diferencia</th></tr></thead><tbody>`;
+  const zcId=cardId+'-zc';
+  zoneC+=`<div class="group-header" onclick="toggleGroup('${zcId}')"><span class="gh-icon">📁</span>SIRADIG — Deducciones declaradas<span class="gh-chev">▼</span></div>`;
+  zoneC+=`<div class="group-content" id="${zcId}">`;
+  zoneC+=`<table class="ded-table"><thead><tr><th>Rubro</th><th>Diciembre</th><th>Anual</th><th>Diferencia</th></tr></thead><tbody>`;
   let stDic=0,stAnu=0,stDif=0;
-  for(const [tipo,d] of Object.entries(emp.siradigDiffs)){
-   const dc=d.dif>0?'dif-pos':d.dif<0?'dif-neg':'dif-zero';
-   const rc=d.dif>0?'row-pos':d.dif<0?'row-neg':'';
-   body+=`<tr class="${rc}"><td class="rubro-name">${d.label}</td><td class="num">${fmt(d.dic)}</td><td class="num">${fmt(d.anual)}</td><td class="${dc}">${d.dif>0?'+':''}${fmt(d.dif)}</td></tr>`;
+  for(const [,d] of Object.entries(emp.siradigDiffs)){
+   const dcls=d.dif>0?'dif-pos':d.dif<0?'dif-neg':'dif-zero';
+   const rcls=d.dif>0?'row-pos':d.dif<0?'row-neg':'';
+   zoneC+=`<tr class="${rcls}"><td class="rubro-name">${d.label}</td><td class="num">${fmt(d.dic)}</td><td class="num">${fmt(d.anual)}</td><td class="${dcls}">${d.dif>0?'+':''}${fmt(d.dif)}</td></tr>`;
    stDic+=d.dic;stAnu+=d.anual;stDif+=d.dif;
   }
-  body+=`</tbody><tfoot><tr><td style="font-weight:700">Total SIRADIG</td><td class="num" style="font-weight:700">${fmt(stDic)}</td><td class="num" style="font-weight:700">${fmt(stAnu)}</td><td class="num" style="font-weight:700">${stDif>0?'+':''}${fmt(stDif)}</td></tr></tfoot></table>`;
+  zoneC+=`</tbody><tfoot><tr><td style="font-weight:700">Total SIRADIG</td><td class="num" style="font-weight:700">${fmt(stDic)}</td><td class="num" style="font-weight:700">${fmt(stAnu)}</td><td class="num" style="font-weight:700">${stDif>0?'+':''}${fmt(stDif)}</td></tr></tfoot></table>`;
+  zoneC+=`</div>`;
  }
 
- // Insights
+ // ── INSIGHTS ──
+ let insSection='';
  if(emp.insights.length){
-  body+=`<div class="section-title"><span class="st-icon">💡</span>Insights</div>`;
-  body+=`<div class="insight-list">`;
   const icons={favorable:'✅',unfavorable:'❌',warning:'⚠️',info:'ℹ️'};
-  for(const ins of emp.insights){
-   body+=`<div class="insight-card ${ins.type}"><span class="ic-icon">${icons[ins.type]||'ℹ️'}</span>${ins.text}</div>`;
-  }
-  body+=`</div>`;
+  insSection=`<div class="insight-list">`+emp.insights.map(i=>`<div class="insight-card ${i.type}"><span class="ic-icon">${icons[i.type]||'ℹ️'}</span>${i.text}</div>`).join('')+`</div>`;
  }
 
  return `<div class="emp-card${isBaja?' baja':''}" id="${cardId}">
@@ -1129,14 +1198,15 @@ function buildCard(emp){
     <div class="emp-name-row"><span class="emp-fullname">${emp.name}</span>${pills}</div>
     <div class="emp-sub">${emp.empresa}</div>
     <div class="meta-pills">${meta}</div>
+    ${headerInsight}
    </div>
    <div class="emp-right">
     ${statusPill}
-    <span class="emp-dif ${difCls}">${abs(impDif)<0.01?'Sin dif.':'$'+(impDif>0?'+':'')+fmt(impDif)}</span>
+    <span class="emp-dif ${headerCls}">${headerLabel}</span>
     <span class="chevron">▼</span>
    </div>
   </div>
-  <div class="emp-body">${body}</div>
+  <div class="emp-body">${zoneA}${zoneB}${zoneC}${insSection}</div>
  </div>`;
 }
 
@@ -1200,8 +1270,8 @@ function renderAudit(){
  let h='';
 
  // Inconsistencies
- const inconsistent=_APP.employees.filter(e=>e.insights.some(i=>i.type==='warning'));
- h+=`<div class="audit-section"><h3>⚠️ Inconsistencias (${inconsistent.length})</h3>`;
+ const inconsistent=_APP.employees.filter(e=>e.coherencia==='inconsistente');
+ h+=`<div class="audit-section"><h3>⚠️ Inconsistentes (${inconsistent.length})</h3>`;
  if(inconsistent.length){
   h+=`<table class="audit-table"><thead><tr><th>Legajo</th><th>Empleado</th><th>Detalle</th></tr></thead><tbody>`;
   for(const e of inconsistent){
