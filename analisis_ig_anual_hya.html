@@ -7,13 +7,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{--cyan:#00AECC;--navy:#1A2E40;--navy2:#2a4a65;--green:#2e7d32;--green-bg:#e8f5e9;--green-light:#f1f8e9;--red:#c62828;--red-bg:#ffebee;--amber:#e65100;--amber-bg:#fff8e1;--amber-border:#ffe082;--gray:#607d8b;--gray-bg:#f7f9fb;--border:#e1e8ed;--text:#1a2332}
+:root{--cyan:#18B7E8;--navy:#1E3A5F;--navy2:#2a4a65;--green:#2e7d32;--green-bg:#e8f5e9;--green-light:#f1f8e9;--red:#c62828;--red-bg:#ffebee;--amber:#e65100;--amber-bg:#fff8e1;--amber-border:#ffe082;--gray:#607d8b;--gray-bg:#f7f9fb;--border:#e1e8ed;--text:#1a2332}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#eef2f7;color:var(--text);min-height:100vh}
-#import-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;background:linear-gradient(160deg,#0f2035 0%,#1a3a55 55%,#0d1f2d 100%)}
+#import-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;background:linear-gradient(160deg,#0d1e30 0%,#1E3A5F 55%,#091521 100%)}
 .import-card{background:white;border-radius:20px;padding:48px 44px;width:100%;max-width:740px;box-shadow:0 32px 80px rgba(0,0,0,.4)}
 .import-header{text-align:center;margin-bottom:36px}
-.import-header .logo-wrap{width:68px;height:68px;margin:0 auto 16px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,174,204,.35);font-size:28px;font-weight:900;color:white}
+.import-header .logo-wrap{width:68px;height:68px;margin:0 auto 16px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(24,183,232,.35);font-size:26px;font-weight:900;font-style:italic;letter-spacing:-.5px;color:white}
 .import-header .brand{font-size:11px;font-weight:800;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
 .import-header h2{font-size:22px;font-weight:700;color:var(--navy);line-height:1.25;margin-bottom:6px}
 .import-header p{font-size:13px;color:var(--gray)}
@@ -42,10 +42,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
 .import-input{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;outline:none;background:#f8fafc;color:var(--text);transition:border-color .2s}
 .import-input:focus{border-color:var(--cyan);background:white}
 .btn-process{width:100%;padding:15px;background:var(--cyan);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:background .2s,transform .1s;display:flex;align-items:center;justify-content:center;gap:10px}
-.btn-process:hover{background:#0098b5}
+.btn-process:hover{background:#0fa3d4}
 .btn-process:disabled{background:#b0bec5;cursor:not-allowed}
 .btn-process:active{transform:scale(.99)}
-#progress-screen{min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0f2035 0%,#1a3a55 55%,#0d1f2d 100%)}
+#progress-screen{min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0d1e30 0%,#1E3A5F 55%,#091521 100%)}
 .progress-card{background:white;border-radius:20px;padding:48px 44px;width:100%;max-width:480px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.4)}
 .progress-card h3{font-size:20px;font-weight:700;color:var(--navy);margin-bottom:8px}
 .progress-card .prog-sub{font-size:13px;color:var(--gray);margin-bottom:28px}
@@ -55,7 +55,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
 .prog-count{font-size:12px;color:var(--cyan);font-weight:600;margin-top:6px}
 
 /* ── GAUGE SCREEN ── */
-#gauge-screen{min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;background:linear-gradient(160deg,#0f2035 0%,#1a3a55 55%,#0d1f2d 100%)}
+#gauge-screen{min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;background:linear-gradient(160deg,#0d1e30 0%,#1E3A5F 55%,#091521 100%)}
 .gauge-card{background:white;border-radius:20px;padding:48px 44px;width:100%;max-width:720px;box-shadow:0 32px 80px rgba(0,0,0,.4);text-align:center}
 .gauge-card h3{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px}
 .gauge-card .gauge-sub{font-size:13px;color:var(--gray);margin-bottom:32px}
@@ -80,18 +80,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
 .gauge-detail-card .gd-label{font-size:11px;color:var(--gray);font-weight:600;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
 .gauge-detail-card.ok .gd-val{color:var(--green)}.gauge-detail-card.review .gd-val{color:var(--amber)}.gauge-detail-card.warn .gd-val{color:var(--red)}
 .btn-continue{padding:15px 48px;background:var(--cyan);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:background .2s}
-.btn-continue:hover{background:#0098b5}
+.btn-continue:hover{background:#0fa3d4}
 
 /* ── APP ── */
 header{background:var(--navy);color:white;padding:0 28px;display:flex;align-items:center;gap:14px;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,.3)}
-header .logo-sm{width:36px;height:36px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:white;flex-shrink:0}
+header .logo-sm{width:36px;height:36px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;font-weight:900;font-style:italic;font-size:13px;color:white;flex-shrink:0;letter-spacing:-.5px}
 header .hdr-title{flex:1}
 header .hdr-client{font-size:11px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:2px}
 header h1{font-size:15px;font-weight:700;letter-spacing:-.1px}
 header .hdr-period{font-size:11px;color:#7fa8c0;margin-top:1px}
 header .hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .btn-excel{background:var(--cyan);color:white;border:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .2s;white-space:nowrap}
-.btn-excel:hover{background:#0098b5}
+.btn-excel:hover{background:#0fa3d4}
 .btn-reset{background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.2);padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;transition:background .2s;white-space:nowrap}
 .btn-reset:hover{background:rgba(255,255,255,.2)}
 .stats-bar{background:white;border-bottom:1px solid var(--border);display:flex;overflow-x:auto}
@@ -219,9 +219,9 @@ header .hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 <body>
 
 <!-- ══════════════ GATE ══════════════ -->
-<div id="gate-screen" style="position:fixed;inset:0;background:linear-gradient(160deg,#0f2035 0%,#1a3a55 55%,#0d1f2d 100%);display:flex;align-items:center;justify-content:center;z-index:9999">
+<div id="gate-screen" style="position:fixed;inset:0;background:linear-gradient(160deg,#0d1e30 0%,#1E3A5F 55%,#091521 100%);display:flex;align-items:center;justify-content:center;z-index:9999">
  <div style="background:white;border-radius:20px;padding:48px 44px;width:100%;max-width:400px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.4)">
-  <div style="width:68px;height:68px;margin:0 auto 20px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:white;box-shadow:0 8px 24px rgba(0,174,204,.35)">H&A</div>
+  <div style="width:68px;height:68px;margin:0 auto 20px;border-radius:50%;background:var(--cyan);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;font-style:italic;letter-spacing:-.5px;color:white;box-shadow:0 8px 24px rgba(24,183,232,.35)">H&A</div>
   <h2 style="font-size:20px;font-weight:700;color:var(--navy);margin-bottom:6px">Análisis Reliquidación Anual</h2>
   <p style="font-size:13px;color:var(--gray);margin-bottom:28px">Impuesto a las Ganancias — 4ta Categoría</p>
   <input id="gate-pwd" type="password" placeholder="Contraseña" class="import-input" style="margin-bottom:12px;text-align:center" onkeydown="if(event.key==='Enter')checkGate()">
@@ -652,7 +652,7 @@ function generateInsights(emp){
  const sa=emp.siradig_anual;
  // saldo = IMPUESTO (= IMPUESTO_TOTAL - ACM_IMPUESTO - IMP_DEB_BAN_ST)
  // positivo = saldo en contra (empleador retiene); negativo = saldo a favor (empleador devuelve)
- const impuesto=anual.IMPUESTO||0;
+ const impuesto=emp.computed.anual.saldoFinal;
 
  const reasons_up=[];   // factors that increase impuesto (unfavorable)
  const reasons_down=[]; // factors that decrease impuesto (favorable)
@@ -832,26 +832,27 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
   const isBaja=hasNomina&&!isInNomina;
 
   // Computed fields per period
-  // Saldo = IMPUESTO_TOTAL - ACM_IMPUESTO - IMP_DEB_BAN_ST = IMPUESTO (campo del Excel)
+  // Saldo = IMPUESTO_TOTAL − (ACM_IMPUESTO + IMPUESTO) − IMP_DEB_BAN_ST
   // Positivo → saldo en contra (empleador retiene); Negativo → saldo a favor (empleador devuelve)
+  const _sf=(r)=>(r.IMPUESTO_TOTAL||0)-((r.ACM_IMPUESTO||0)+(r.IMPUESTO||0))-(r.IMP_DEB_BAN_ST||0);
   const computed={
    dic:{
     totalHaberes:dic.IG_TOT_C_IM_ST||0,
     totalSAC:(dic.TOT_SAC_PRORRA||0)+(dic.IG_SAC_PRES||0),
     totalRetenciones:(dic.IG_TOT_JUB_ST||0)+(dic.IG_T_19032_ST||0)+(dic.IG_TOT_OB_S_ST||0)+(dic.IG_O_DEDUC_REM||0),
     impuestoDeterminado:dic.IMPUESTO_TOTAL||0,
-    impuestoRetenido:dic.ACM_IMPUESTO||0,
+    impuestoRetenido:(dic.ACM_IMPUESTO||0)+(dic.IMPUESTO||0),
     pagosCuenta:dic.IMP_DEB_BAN_ST||0,
-    saldoFinal:dic.IMPUESTO||0,
+    saldoFinal:_sf(dic),
    },
    anual:{
     totalHaberes:anual.IG_TOT_C_IM_ST||0,
     totalSAC:(anual.TOT_SAC_PRORRA||0)+(anual.IG_SAC_PRES||0),
     totalRetenciones:(anual.IG_TOT_JUB_ST||0)+(anual.IG_T_19032_ST||0)+(anual.IG_TOT_OB_S_ST||0)+(anual.IG_O_DEDUC_REM||0),
     impuestoDeterminado:anual.IMPUESTO_TOTAL||0,
-    impuestoRetenido:anual.ACM_IMPUESTO||0,
+    impuestoRetenido:(anual.ACM_IMPUESTO||0)+(anual.IMPUESTO||0),
     pagosCuenta:anual.IMP_DEB_BAN_ST||0,
-    saldoFinal:anual.IMPUESTO||0,
+    saldoFinal:_sf(anual),
    }
   };
 
@@ -882,7 +883,7 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
    hasChange=hasChange||Object.values(siradigDiffs).some(d=>abs(d.dif)>0.01);
   }
 
-  const impuestoDif=(anual.IMPUESTO||0)-(dic.IMPUESTO||0);
+  const impuestoDif=computed.anual.saldoFinal; // Saldo real anual = base de ajuste neto, ranking, stats
 
   const emp={
    id,name,empresa,cuil,
@@ -1088,8 +1089,8 @@ function buildCard(emp){
  if(emp.cuil)meta+=`<span class="mpill">CUIL ${emp.cuil}</span>`;
  meta+=`<span class="mpill">Leg. ${emp.id}</span>`;
 
- // Header number: anual IMPUESTO (the recalculation adjustment)
- const headerImp=emp.anual?.IMPUESTO||0;
+ // Header number: saldo final anual (IMPUESTO_TOTAL − ACM_IMPUESTO − IMP_DEB_BAN_ST)
+ const headerImp=emp.computed?.anual?.saldoFinal||0;
  const headerCls=abs(headerImp)<0.01?'zero':headerImp>0?'neg':'pos';
  const headerLabel=abs(headerImp)<0.01?'Sin ajuste':'$'+(headerImp>0?'+':'')+fmt(headerImp);
 
@@ -1250,12 +1251,13 @@ function renderRanking(){
  const maxAbs=sorted.length?abs(sorted[0].impuestoDif):1;
  let h=`<table class="ranking-table"><thead><tr><th>#</th><th>Legajo</th><th>Empleado</th><th>Empresa</th><th style="text-align:right">Dic</th><th style="text-align:right">Anual</th><th style="text-align:right">Diferencia</th><th>Barra</th></tr></thead><tbody>`;
  sorted.forEach((e,i)=>{
-  const d=e.diffs.IMPUESTO||{dic:0,anual:0,dif:0};
+  const sDic=e.computed?.dic?.saldoFinal||0;
+  const sAnual=e.computed?.anual?.saldoFinal||0;
   const cls=e.impuestoDif>0?'neg':'pos';
   const barCls=e.impuestoDif>0?'bar-neg':'bar-pos';
   const pct=Math.round(abs(e.impuestoDif)/maxAbs*100);
   h+=`<tr><td>${i+1}</td><td>${e.id}</td><td style="font-weight:600">${e.name}</td><td>${e.empresa}</td>
-   <td class="num">${fmt(d.dic)}</td><td class="num">${fmt(d.anual)}</td>
+   <td class="num">${fmt(sDic)}</td><td class="num">${fmt(sAnual)}</td>
    <td class="num" style="font-weight:700;color:var(--${cls==='pos'?'green':'red'})">${e.impuestoDif>0?'+':''}${fmt(e.impuestoDif)}</td>
    <td class="bar-cell"><div class="bar-wrap"><div class="bar-inner ${barCls}" style="width:${pct}%"></div></div></td></tr>`;
  });
