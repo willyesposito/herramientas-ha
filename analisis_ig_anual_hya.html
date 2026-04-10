@@ -369,8 +369,9 @@ const IMPGAN_GROUPS=[
   {k:'REM_ANT_EMP',l:'Remuneración anterior empleador',dir:'income'},
  ]},
  {id:'impuesto',label:'Impuesto',icon:'🧾',keys:[
-  {k:'ACM_IMPUESTO',l:'Impuesto acumulado retenido',dir:'tax'},
-  {k:'IMPUESTO',l:'Ajuste final (retención/devolución)',dir:'final'},
+  {k:'IMPUESTO_TOTAL',l:'Impuesto Determinado (Escala)',dir:'tax'},
+  {k:'ACM_IMPUESTO',l:'Impuesto Retenido Acumulado',dir:'tax'},
+  {k:'IMPUESTO',l:'Saldo (Ret./Dev.)',dir:'final'},
   {k:'IMP_DEB_BAN_ST',l:'Pagos a cuenta (Art. 35)',dir:'ded'},
  ]},
 ];
@@ -649,8 +650,9 @@ function generateInsights(emp){
  const dic=emp.dic||{};
  const anual=emp.anual||{};
  const sa=emp.siradig_anual;
+ // saldo = IMPUESTO (= IMPUESTO_TOTAL - ACM_IMPUESTO - IMP_DEB_BAN_ST)
+ // positivo = saldo en contra (empleador retiene); negativo = saldo a favor (empleador devuelve)
  const impuesto=anual.IMPUESTO||0;
- const saldoAnual=(anual.IMP_DEB_BAN_ST||0)-impuesto;
 
  const reasons_up=[];   // factors that increase impuesto (unfavorable)
  const reasons_down=[]; // factors that decrease impuesto (favorable)
@@ -711,7 +713,7 @@ function generateInsights(emp){
  let coherencia;
  const allReasons=[...reasons_up,...reasons_down];
  const saldoText=abs(impuesto)<0.01?'Sin ajuste de impuesto.'
-  :saldoAnual>=0?`Saldo a favor: $${fmt(saldoAnual)}.`:`Saldo en contra: $${fmt(abs(saldoAnual))}.`;
+  :impuesto>0?`Saldo en contra: $${fmt(impuesto)}.`:`Saldo a favor: $${fmt(abs(impuesto))}.`;
 
  if(warnTexts.length){
   const extra=allReasons.length?` Factores: ${allReasons.join(', ')}.`:'';
@@ -741,11 +743,11 @@ function generateInsights(emp){
  // Insight 2: pagos a cuenta (solo si hay valor)
  const pagosCuenta=anual.IMP_DEB_BAN_ST||0;
  if(abs(pagosCuenta)>0.01){
-  const sf=pagosCuenta-impuesto;
-  insights.push({
-   type:sf>=0?'favorable':'unfavorable',
-   text:`Pagos a cuenta (Art. 35): $${fmt(pagosCuenta)}. Saldo final ${sf>=0?'a favor: $'+fmt(sf):'en contra: $'+fmt(abs(sf))}.`
-  });
+  if(abs(impuesto)<0.01)
+   insights.push({type:'info',text:`Pagos a cuenta (Art. 35): $${fmt(pagosCuenta)}. Impuesto ya cubierto. Empleado debe tramitar devolución en AFIP.`});
+  else
+   insights.push({type:impuesto>0?'unfavorable':'favorable',
+    text:`Incluye pagos a cuenta (Art. 35): $${fmt(pagosCuenta)}. Saldo ${impuesto>0?'en contra: $'+fmt(impuesto):'a favor: $'+fmt(abs(impuesto))}.`});
  }
 
  return{insights,coherencia};
@@ -823,28 +825,33 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
   const name=nom?nom.fullName:(anual.NOMBRE||dic.NOMBRE||'Empleado '+id);
   const empresa=anual.N_EMPRESA||dic.N_EMPRESA||'';
 
-  // Baja detection: ID first, CUIL fallback, IMPGAN last
+  // Baja detection: si nómina fue cargada y el empleado NO está → baja
   const nomByCuil=!nom&&cuil?nomina.byCuil[cuil]||null:null;
-  const nominaData=nom||nomByCuil;
-  const isBaja=nominaData?!nominaData.activo:!!(dic.FECHA_BAJA||anual.FECHA_BAJA);
+  const hasNomina=Object.keys(nomina.byId).length>0;
+  const isInNomina=!!(nom||nomByCuil);
+  const isBaja=hasNomina&&!isInNomina;
 
   // Computed fields per period
+  // Saldo = IMPUESTO_TOTAL - ACM_IMPUESTO - IMP_DEB_BAN_ST = IMPUESTO (campo del Excel)
+  // Positivo → saldo en contra (empleador retiene); Negativo → saldo a favor (empleador devuelve)
   const computed={
    dic:{
     totalHaberes:dic.IG_TOT_C_IM_ST||0,
     totalSAC:(dic.TOT_SAC_PRORRA||0)+(dic.IG_SAC_PRES||0),
     totalRetenciones:(dic.IG_TOT_JUB_ST||0)+(dic.IG_T_19032_ST||0)+(dic.IG_TOT_OB_S_ST||0)+(dic.IG_O_DEDUC_REM||0),
-    impuestoRetenido:(dic.ACM_IMPUESTO||0)+(dic.IMPUESTO||0),
+    impuestoDeterminado:dic.IMPUESTO_TOTAL||0,
+    impuestoRetenido:dic.ACM_IMPUESTO||0,
     pagosCuenta:dic.IMP_DEB_BAN_ST||0,
-    saldoFinal:(dic.IMP_DEB_BAN_ST||0)-(dic.IMPUESTO||0),
+    saldoFinal:dic.IMPUESTO||0,
    },
    anual:{
     totalHaberes:anual.IG_TOT_C_IM_ST||0,
     totalSAC:(anual.TOT_SAC_PRORRA||0)+(anual.IG_SAC_PRES||0),
     totalRetenciones:(anual.IG_TOT_JUB_ST||0)+(anual.IG_T_19032_ST||0)+(anual.IG_TOT_OB_S_ST||0)+(anual.IG_O_DEDUC_REM||0),
-    impuestoRetenido:(anual.ACM_IMPUESTO||0)+(anual.IMPUESTO||0),
+    impuestoDeterminado:anual.IMPUESTO_TOTAL||0,
+    impuestoRetenido:anual.ACM_IMPUESTO||0,
     pagosCuenta:anual.IMP_DEB_BAN_ST||0,
-    saldoFinal:(anual.IMP_DEB_BAN_ST||0)-(anual.IMPUESTO||0),
+    saldoFinal:anual.IMPUESTO||0,
    }
   };
 
@@ -1092,21 +1099,38 @@ function buildCard(emp){
   ?`<div style="font-size:11px;color:var(--gray);margin-top:4px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px">${firstInsightText}</div>`:'';
 
  // ── ZONE A: Impuesto (always visible, non-collapsible) ──
- const impRetDic=c.dic.impuestoRetenido, impRetAnual=c.anual.impuestoRetenido, impRetDif=impRetAnual-impRetDic;
- const pagDic=c.dic.pagosCuenta, pagAnual=c.anual.pagosCuenta, pagDif=pagAnual-pagDic;
- const saldoDic=c.dic.saldoFinal, saldoAnual=c.anual.saldoFinal, saldoDif=saldoAnual-saldoDic;
+ // Fórmula: Saldo = IMPUESTO_TOTAL − ACM_IMPUESTO − IMP_DEB_BAN_ST = IMPUESTO
+ // Positivo → saldo en contra (empleador retiene); Negativo → saldo a favor (empleador devuelve)
+ const detDic=c.dic.impuestoDeterminado,  detAnual=c.anual.impuestoDeterminado,  detDif=detAnual-detDic;
+ const retDic=c.dic.impuestoRetenido,     retAnual=c.anual.impuestoRetenido,     retDif=retAnual-retDic;
+ const pagDic=c.dic.pagosCuenta,          pagAnual=c.anual.pagosCuenta,          pagDif=pagAnual-pagDic;
+ const saldoDic=c.dic.saldoFinal,         saldoAnual=c.anual.saldoFinal,         saldoDif=saldoAnual-saldoDic;
  const dc=(v,pos,neg)=>abs(v)<0.01?'dif-zero':v>0?pos:neg;
- const saldoPill=abs(saldoAnual)<0.01?''
-  :saldoAnual>0?'<span class="pill pill-ok" style="font-size:12px;padding:3px 10px">Saldo a favor</span>'
-  :'<span class="pill" style="background:#ffebee;color:var(--red);font-size:12px;padding:3px 10px">Saldo en contra</span>';
+
+ // Pill bajo tabla (basado en saldo anual)
+ let saldoPill='';
+ if(abs(saldoAnual)<0.01&&abs(pagAnual)>0.01)
+  saldoPill='<span class="pill pill-info" style="font-size:12px;padding:3px 10px">Tramitar devolución en AFIP</span>';
+ else if(saldoAnual>0.01)
+  saldoPill='<span class="pill" style="background:#ffebee;color:var(--red);font-size:12px;padding:3px 10px">Saldo en contra</span>';
+ else if(saldoAnual<-0.01)
+  saldoPill='<span class="pill pill-ok" style="font-size:12px;padding:3px 10px">Saldo a favor</span>';
+
+ // Color de la fila Saldo: positivo=rojo(en contra), negativo=verde(a favor)
+ const saldoAnualCls=abs(saldoAnual)<0.01?'dif-zero':saldoAnual>0?'dif-neg':'dif-pos';
+ const saldoDicCls=abs(saldoDic)<0.01?'dif-zero':saldoDic>0?'dif-neg':'dif-pos';
 
  let zoneA=`<div style="padding:14px 18px 12px;background:#f8fafc;border-bottom:1.5px solid var(--border)">`;
  zoneA+=`<div style="font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🧾 Impuesto</div>`;
  zoneA+=`<table class="ded-table"><thead><tr><th>Concepto</th><th>Diciembre</th><th>Anual</th><th>Diferencia</th></tr></thead><tbody>`;
- zoneA+=`<tr><td class="rubro-name">Impuesto Retenido <span style="color:var(--gray);font-size:11px">(Acum. + Ajuste)</span></td><td class="num">${fmt(impRetDic)}</td><td class="num">${fmt(impRetAnual)}</td><td class="${dc(impRetDif,'dif-neg','dif-pos')}">${impRetDif>0?'+':''}${fmt(impRetDif)}</td></tr>`;
+ zoneA+=`<tr><td class="rubro-name">Impuesto Determinado <span style="color:var(--gray);font-size:11px">(Escala)</span></td><td class="num">${fmt(detDic)}</td><td class="num">${fmt(detAnual)}</td><td class="${dc(detDif,'dif-neg','dif-pos')}">${detDif>0?'+':''}${fmt(detDif)}</td></tr>`;
+ zoneA+=`<tr><td class="rubro-name">(−) Impuesto Retenido <span style="color:var(--gray);font-size:11px">(Acumulado)</span></td><td class="num">${fmt(retDic)}</td><td class="num">${fmt(retAnual)}</td><td class="${dc(retDif,'dif-pos','dif-neg')}">${retDif>0?'+':''}${fmt(retDif)}</td></tr>`;
  if(abs(pagDic)>0.01||abs(pagAnual)>0.01)
-  zoneA+=`<tr><td class="rubro-name">(-) Pagos a cuenta <span style="color:var(--gray);font-size:11px">(Art. 35)</span></td><td class="num">${fmt(pagDic)}</td><td class="num">${fmt(pagAnual)}</td><td class="${dc(pagDif,'dif-pos','dif-neg')}">${pagDif>0?'+':''}${fmt(pagDif)}</td></tr>`;
- zoneA+=`<tr style="background:#eef6ee"><td style="font-weight:800;color:var(--navy)">Saldo final</td><td class="num" style="font-weight:700">${fmt(saldoDic)}</td><td class="num" style="font-weight:700">${fmt(saldoAnual)}</td><td class="${dc(saldoDif,'dif-pos','dif-neg')}" style="font-weight:800">${saldoDif>0?'+':''}${fmt(saldoDif)}</td></tr>`;
+  zoneA+=`<tr><td class="rubro-name">(−) Pagos a cuenta <span style="color:var(--gray);font-size:11px">(Art. 35)</span></td><td class="num">${fmt(pagDic)}</td><td class="num">${fmt(pagAnual)}</td><td class="${dc(pagDif,'dif-pos','dif-neg')}">${pagDif>0?'+':''}${fmt(pagDif)}</td></tr>`;
+ zoneA+=`<tr style="background:#f0f4f8"><td style="font-weight:800;color:var(--navy)">Saldo</td>`;
+ zoneA+=`<td class="num ${saldoDicCls}" style="font-weight:700">${fmt(saldoDic)}</td>`;
+ zoneA+=`<td class="num ${saldoAnualCls}" style="font-weight:800">${fmt(saldoAnual)}</td>`;
+ zoneA+=`<td class="${dc(saldoDif,'dif-neg','dif-pos')}" style="font-weight:800">${saldoDif>0?'+':''}${fmt(saldoDif)}</td></tr>`;
  zoneA+=`</tbody></table>`;
  if(saldoPill)zoneA+=`<div style="margin-top:10px">${saldoPill}</div>`;
  zoneA+=`</div>`;
