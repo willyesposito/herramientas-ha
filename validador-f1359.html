@@ -2735,7 +2735,7 @@ function downloadPatchedFile(content) {
 }
 
 // ── VERSIÓN (actualizar acá en cada release) ──────────────
-const APP_VERSION = 'v2.5';
+const APP_VERSION = 'v2.5.1';
 function buildSidebarFieldRef() {
   const container = document.getElementById('sbFieldRef');
   if (!container) return;
@@ -3040,6 +3040,8 @@ function normHeader(s) {
 // Mapa de headers del Excel → clave interna Meta 4
 const EXCEL_HEADER_MAP = {
   'cuil': 'cuil', 'nro cuil': 'cuil', 'cuit': 'cuil', 'numero cuil': 'cuil',
+  'n cuil': 'cuil', 'cuil empleado': 'cuil', 'cuil nro': 'cuil',
+  'cuit cuil': 'cuil', 'legajo cuil': 'cuil', 'nro cuit': 'cuil',
   'nombre': 'nombre', 'apellido y nombre': 'nombre', 'empleado': 'nombre',
   'haberes imponibles': 'Haberes imponibles',
   'total haberes': 'TOTAL HABERES',
@@ -3076,6 +3078,14 @@ function parseExcelMeta4(arrayBuffer) {
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
 
+  // Helper: leer valor raw de una celda (evita notación científica en CUILs numéricos)
+  function rawCell(ws, r, c) {
+    const ref = XLSX.utils.encode_cell({ r, c });
+    const cell = ws[ref];
+    if (!cell) return '';
+    return String(cell.v ?? '');
+  }
+
   // Encontrar fila de headers (primera fila con ≥3 textos no vacíos)
   let headerRowIdx = -1;
   let colMap = {}; // colName → colIndex
@@ -3099,10 +3109,11 @@ function parseExcelMeta4(arrayBuffer) {
 
   // Detectar columna CUIL por contenido si no encontrada en headers
   if (colMap['cuil'] === undefined) {
-    const sampleRow = rows[headerRowIdx + 1] || [];
-    sampleRow.forEach((cell, idx) => {
-      const s = String(cell || '').replace(/\D/g, '');
-      if (s.length === 11) colMap['cuil'] = idx;
+    const sampleRowIdx = headerRowIdx + 1;
+    const sampleRow = rows[sampleRowIdx] || [];
+    sampleRow.forEach((_, idx) => {
+      const s = rawCell(ws, sampleRowIdx, idx).replace(/\D/g, '');
+      if (s.length === 11 && colMap['cuil'] === undefined) colMap['cuil'] = idx;
     });
   }
 
@@ -3114,7 +3125,7 @@ function parseExcelMeta4(arrayBuffer) {
     if (!row || row.every(c => !c || String(c).trim() === '')) continue;
 
     const cuil = colMap['cuil'] !== undefined
-      ? String(row[colMap['cuil']] || '').replace(/\D/g, '')
+      ? rawCell(ws, i, colMap['cuil']).replace(/\D/g, '')
       : null;
     const nombre = colMap['nombre'] !== undefined
       ? String(row[colMap['nombre']] || '').trim()
@@ -3206,7 +3217,7 @@ async function validarMasiva() {
 
   for (let i = 0; i < trabajadores.length; i++) {
     const t = trabajadores[i];
-    const cuil = t.lines['02'] ? str(t.lines['02'], 3, 11) : `#${i+1}`;
+    const cuil = t.lines['02'] ? str(t.lines['02'], 3, 11).replace(/\D/g, '') : `#${i+1}`;
 
     // Errores de formato de este trabajador
     const tErr  = errores.filter(e => e._tidx === i);
@@ -3291,7 +3302,7 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
 
     html += `<tr class="${rowCls}" id="row-${r.idx}">
       <td class="col-num">${r.idx + 1}</td>
-      <td class="col-cuil">${r.cuil}</td>
+      <td class="col-cuil">${r.cuil && r.cuil.length === 11 ? `${r.cuil.slice(0,2)}-${r.cuil.slice(2,10)}-${r.cuil.slice(10)}` : r.cuil || '—'}</td>
       <td>${r.nombre || '<span style="color:var(--muted)">—</span>'}</td>
       <td class="col-icon">${txtIcon}</td>
       <td class="col-icon">${cruceIcon}</td>
