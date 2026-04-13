@@ -325,7 +325,7 @@ header .hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 
 <script>
 'use strict';
-const APP_VERSION='4.0';
+const APP_VERSION='4.1';
 
 /* ═══════════════════════════════════════════
    CONSTANTS & CONFIG
@@ -358,6 +358,7 @@ const IMPGAN_GROUPS=[
   {k:'IG_SEGURO_MIXTO',l:'Seguros mixtos',dir:'ded'},
   {k:'IG_AP_VOL_REM',l:'Aportes voluntarios',dir:'ded'},
   {k:'IG_CMASIS_REMUN',l:'Cuota médico-asistencial',dir:'ded'},
+  {k:'IG_ODEDU_NOREM',l:'Ind. y Equipo Laboral (Art.35 inc.b)',dir:'ded'},
   {k:'IG_G_NO_IMP',l:'Ganancia No Imponible',dir:'ded'},
   {k:'IG_DED_ESP',l:'Deducción Especial',dir:'ded'},
   {k:'IG_DEDPER_12',l:'Ded. Personales Art.23',dir:'ded'},
@@ -382,7 +383,7 @@ const IMPGAN_GROUPS=[
 const SIRADIG_IMPGAN_MAP={
  1:'IG_CMASIS_REMUN',2:'IG_SEGURO_REMUN',3:'IG_DONAC_REMUN',
  4:'IG_INT_HIP',5:'IG_SEPELIO_REM',7:'IMP_DED_HON_MED',
- 8:'DED_SER_DOM_ST',22:'IG_ALQUILER',23:'IG_SEGURO_MIXTO',
+ 8:'DED_SER_DOM_ST',21:'IG_ODEDU_NOREM',22:'IG_ALQUILER',23:'IG_SEGURO_MIXTO',
  24:'IG_RETIRO_REMUN',32:'GASTOS_EDUC',33:'IG_ALQUILER'
 };
 
@@ -402,6 +403,7 @@ const COLUMN_ALIASES={
  IG_SEPELIO_REM:['IG_SEPELIO_REM'],IG_RETIRO_REMUN:['IG_RETIRO_REMUN'],
  IG_SEGURO_MIXTO:['IG_SEGURO_MIXTO'],IG_AP_VOL_REM:['IG_AP_VOL_REM','JUR_AP_VOLUNT'],
  IG_CMASIS_REMUN:['IG_CMASIS_REMUN'],
+ IG_ODEDU_NOREM:['IG_ODEDU_NOREM','IG_O_DEDUC_NOREM','IG_INDUM_REMUN'],
  IG_G_NO_IMP:['IG_G_NO_IMP'],IG_DED_ESP:['IG_DED_ESP'],IG_DEDPER_12:['IG_DEDPER_12'],
  IG_CONYUGE_REM:['IG_CONYUGE_REM'],IG_HIJOS_REM:['IG_HIJOS_REM'],IG_OCARGAS_REM:['IG_OCARGAS_REM'],
  BASE_ANT_EMP:['BASE_ANT_EMP'],IMP_ANT_EMP:['IMP_ANT_EMP'],REM_ANT_EMP:['REM_ANT_EMP'],
@@ -597,13 +599,14 @@ function parseXML(xmlStr){
   if(tipo===99&&monto>0)t99.push({denom:tag(d,'denominacion'),monto});
  }
  data.deducciones=deds;data.tipo99_detail=t99;
- const ret=[];
+ const ret=[];let pagosCuentaNet=0;
  const retNodes=doc.getElementsByTagName('retPerPago');
  for(let i=0;i<retNodes.length;i++){
   const r=retNodes[i];const monto=tagf(r,'montoTotal');
-  if(monto>0)ret.push({tipo:r.getAttribute('tipo')||'',denominacion:tag(r,'denominacion'),monto});
+  pagosCuentaNet+=monto;
+  ret.push({tipo:r.getAttribute('tipo')||'',denominacion:tag(r,'denominacion'),monto});
  }
- data.retPerPagos=ret;
+ data.retPerPagos=ret;data.pagosCuentaNet=pagosCuentaNet;
  const cargas=[];
  const cfNodes=doc.getElementsByTagName('cargaFamilia');
  for(let i=0;i<cfNodes.length;i++){
@@ -680,7 +683,7 @@ function generateInsights(emp){
  // 3. Deducciones totales (SIRADIG + personales desde IMPGAN)
  const dedCols=['IG_ALQUILER','IG_INT_HIP','IMP_DED_HON_MED','DED_SER_DOM_ST','GASTOS_EDUC',
   'IG_DONAC_REMUN','IG_SEGURO_REMUN','IG_SEPELIO_REM','IG_RETIRO_REMUN','IG_SEGURO_MIXTO',
-  'IG_AP_VOL_REM','IG_CMASIS_REMUN','IG_G_NO_IMP','IG_DED_ESP','IG_DEDPER_12',
+  'IG_AP_VOL_REM','IG_CMASIS_REMUN','IG_ODEDU_NOREM','IG_G_NO_IMP','IG_DED_ESP','IG_DEDPER_12',
   'IG_CONYUGE_REM','IG_HIJOS_REM','IG_OCARGAS_REM'];
  const dedDic=dedCols.reduce((s,k)=>s+(dic[k]||0),0);
  const dedAnual=dedCols.reduce((s,k)=>s+(anual[k]||0),0);
@@ -747,7 +750,11 @@ function generateInsights(emp){
   const isCoherent=abs(impuesto)<100||(netIsUp===impIsUp);
   const tipo=reasons_up.length>reasons_down.length?'unfavorable':'favorable';
   let txt='';
-  if(reasons_up.length&&reasons_down.length)
+  if(!isCoherent&&reasons_up.length===0&&impuesto>0)
+   txt=`Factores favorables: ${reasons_down.join(', ')}. Sin embargo el impuesto determinado subió — posibles factores no reflejados en IMPGAN (ej. cambios en SIRADIG, indumentaria u otros). ${saldoText}`;
+  else if(!isCoherent&&reasons_down.length===0&&impuesto<0)
+   txt=`Factores desfavorables: ${reasons_up.join(', ')}. Sin embargo el impuesto determinado bajó. Verificar fuentes. ${saldoText}`;
+  else if(reasons_up.length&&reasons_down.length)
    txt=`Sube por: ${reasons_up.join(', ')}; baja por: ${reasons_down.join(', ')}. ${saldoText}`;
   else if(reasons_up.length)
    txt=`Base imponible sube por: ${reasons_up.join(', ')}. ${saldoText}`;
@@ -856,7 +863,10 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
   // Computed fields per period
   // Saldo = IMPUESTO_TOTAL − (ACM_IMPUESTO + IMPUESTO) − IMP_DEB_BAN_ST
   // Positivo → saldo en contra (empleador retiene); Negativo → saldo a favor (empleador devuelve)
-  const _sf=(r)=>(r.IMPUESTO_TOTAL||0)-((r.ACM_IMPUESTO||0)+(r.IMPUESTO||0))-(r.IMP_DEB_BAN_ST||0);
+  // Pagos a cuenta: usar SIRADIG pagosCuentaNet cuando disponible (respeta negativos inc.b)
+  const pagCuentaDic=(siradigD?.pagosCuentaNet!=null&&siradigD.retPerPagos?.length)?siradigD.pagosCuentaNet:(dic.IMP_DEB_BAN_ST||0);
+  const pagCuentaAnual=(siradigA?.pagosCuentaNet!=null&&siradigA.retPerPagos?.length)?siradigA.pagosCuentaNet:(anual.IMP_DEB_BAN_ST||0);
+  const _sf=(impTot,acm,imp,pag)=>impTot-(acm+imp)-pag;
   const computed={
    dic:{
     totalHaberes:dic.IG_TOT_C_IM_ST||0,
@@ -864,8 +874,8 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
     totalRetenciones:(dic.IG_TOT_JUB_ST||0)+(dic.IG_T_19032_ST||0)+(dic.IG_TOT_OB_S_ST||0)+(dic.IG_O_DEDUC_REM||0),
     impuestoDeterminado:dic.IMPUESTO_TOTAL||0,
     impuestoRetenido:(dic.ACM_IMPUESTO||0)+(dic.IMPUESTO||0),
-    pagosCuenta:dic.IMP_DEB_BAN_ST||0,
-    saldoFinal:_sf(dic),
+    pagosCuenta:pagCuentaDic,
+    saldoFinal:_sf(dic.IMPUESTO_TOTAL||0,dic.ACM_IMPUESTO||0,dic.IMPUESTO||0,pagCuentaDic),
    },
    anual:{
     totalHaberes:anual.IG_TOT_C_IM_ST||0,
@@ -873,8 +883,8 @@ function buildAppData(dicR,anualR,siradigDic,siradigAnual,nomina,clientName){
     totalRetenciones:(anual.IG_TOT_JUB_ST||0)+(anual.IG_T_19032_ST||0)+(anual.IG_TOT_OB_S_ST||0)+(anual.IG_O_DEDUC_REM||0),
     impuestoDeterminado:anual.IMPUESTO_TOTAL||0,
     impuestoRetenido:(anual.ACM_IMPUESTO||0)+(anual.IMPUESTO||0),
-    pagosCuenta:anual.IMP_DEB_BAN_ST||0,
-    saldoFinal:_sf(anual),
+    pagosCuenta:pagCuentaAnual,
+    saldoFinal:_sf(anual.IMPUESTO_TOTAL||0,anual.ACM_IMPUESTO||0,anual.IMPUESTO||0,pagCuentaAnual),
    }
   };
 
@@ -1191,6 +1201,7 @@ function buildCard(emp){
   {k:'DED_SER_DOM_ST',l:'Servicio doméstico'},{k:'GASTOS_EDUC',l:'Gastos de educación'},{k:'IG_DONAC_REMUN',l:'Donaciones'},
   {k:'IG_SEGURO_REMUN',l:'Seguros de vida'},{k:'IG_SEPELIO_REM',l:'Sepelio'},{k:'IG_RETIRO_REMUN',l:'Seguro de retiro'},
   {k:'IG_SEGURO_MIXTO',l:'Seguros mixtos'},{k:'IG_AP_VOL_REM',l:'Aportes voluntarios'},{k:'IG_CMASIS_REMUN',l:'Cuota médico-asistencial'},
+  {k:'IG_ODEDU_NOREM',l:'Ind. y Equipo Laboral (Art.35 inc.b)'},
   {k:'IG_G_NO_IMP',l:'Ganancia No Imponible'},{k:'IG_DED_ESP',l:'Deducción Especial'},{k:'IG_DEDPER_12',l:'Ded. Personales Art.23'},
   {k:'IG_CONYUGE_REM',l:'Cónyuge'},{k:'IG_HIJOS_REM',l:'Hijos'},{k:'IG_OCARGAS_REM',l:'Otras cargas de familia'},
  ];
@@ -1198,8 +1209,10 @@ function buildCard(emp){
  if(dedRows.length){
   zoneB+=`<div style="padding:7px 18px 4px;font-size:11px;font-weight:700;color:var(--navy2);text-transform:uppercase;letter-spacing:.8px;background:#fafcfd;border-bottom:1px solid var(--border)">Deducciones</div>`;
   zoneB+=`<table class="ded-table"><tbody>`;
-  for(const r of dedRows){const df=r.a-r.d;const rc=abs(df)<0.01?'':(df>0?'row-pos':'row-neg');zoneB+=`<tr class="${rc}"><td class="rubro-name">${r.l}</td><td class="num">${fmt(r.d)}</td><td class="num">${fmt(r.a)}</td><td class="${dc(df,'dif-pos','dif-neg')}">${df>0?'+':''}${fmt(df)}</td></tr>`;}
-  zoneB+=`</tbody></table>`;
+  let tDd=0,tDa=0;
+  for(const r of dedRows){const df=r.a-r.d;const rc=abs(df)<0.01?'':(df>0?'row-pos':'row-neg');tDd+=r.d;tDa+=r.a;zoneB+=`<tr class="${rc}"><td class="rubro-name">${r.l}</td><td class="num">${fmt(r.d)}</td><td class="num">${fmt(r.a)}</td><td class="${dc(df,'dif-pos','dif-neg')}">${df>0?'+':''}${fmt(df)}</td></tr>`;}
+  const tDf=tDa-tDd;
+  zoneB+=`</tbody><tfoot><tr><td style="font-weight:700">Total Deducciones</td><td class="num" style="font-weight:700">${fmt(tDd)}</td><td class="num" style="font-weight:700">${fmt(tDa)}</td><td class="${dc(tDf,'dif-pos','dif-neg')}" style="font-weight:700">${tDf>0?'+':''}${fmt(tDf)}</td></tr></tfoot></table>`;
  }
 
  // Sub: Otros Empleadores (only if has data)
