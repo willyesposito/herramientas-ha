@@ -1058,8 +1058,13 @@ function downloadExcel(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(r1),'1 - Resumen');
   const hdr=['Legajo','CUIL','Apellido','Nombre','Empresa','CCT','Puesto','Dpto.','Pres.'+p1,'Pres.'+p2];
   for(const t of all_tipos){const l=tipo_labels[String(t)]||`Tipo ${t}`;hdr.push(`${l}-${p1}`,`${l}-${p2}`,`${l}-Dif`);}
-  hdr.push('Ret.cta.'+p1,'Ret.cta.'+p2,'[OTROS EMP./ENT.]-'+p1,'[OTROS EMP./ENT.]-'+p2,'[OTROS EMP./ENT.]-Dif','Total '+p1,'Total '+p2,'Dif.Final');
-  const mkRow=e=>{const r=[e.legajo,e.cuit,e.apellido,e.nombre,e.empresa,e.cct,e.puesto,e.departamento,e.nroPres_dic,e.nroPres_pre];for(const t of all_tipos){const v=e.deds[t];r.push(v?fN(v.dic):0,v?fN(v.pre):0,v?fN(v.dif):0);}r.push(fN(e.total_ret_dic||0),fN(e.total_ret_pre||0),fN(e.total_ooee_dic||0),fN(e.total_ooee_pre||0),fN((e.total_ooee_pre||0)-(e.total_ooee_dic||0)),fN(e.total_dic),fN(e.total_pre),fN(e.total_dif_full));return r;};
+  const OOEE_F_ALL=['ganBrut','retGan','obraSoc','segSocANSES','segSocCajas','sind','retribNoHab','ajusteRemGravadas','ajusteRemExeNoAlcanzadas','asignFam','intPrestEmp','indemLey4003','remunLey19640','remunCctPetro','cursosSemin','indumEquipEmp','sac'];
+  const OOEE_LBL_XLS={ganBrut:'Gan. Bruta',retGan:'Ret. Ganancias',obraSoc:'Obra Social',segSocANSES:'Seg.Soc. ANSES',segSocCajas:'Seg.Soc. Cajas',sind:'Sindicato',retribNoHab:'Retrib. No Hab.',ajusteRemGravadas:'Aj. Rem. Grav.',ajusteRemExeNoAlcanzadas:'Aj. Rem. Exe.',asignFam:'Asig. Familiares',intPrestEmp:'Int. Préstamo',indemLey4003:'Indem. L.4003',remunLey19640:'Rem. L.19640',remunCctPetro:'Rem. CCT Petro.',cursosSemin:'Cursos/Semin.',indumEquipEmp:'Indum./Equip.',sac:'SAC'};
+  const active_ooee_f=OOEE_F_ALL.filter(f=>employees.some(e=>e.ooee_rows&&e.ooee_rows[f]));
+  hdr.push('Ret.cta.'+p1,'Ret.cta.'+p2);
+  for(const f of active_ooee_f){const l='[OOEE] '+OOEE_LBL_XLS[f];hdr.push(l+'-'+p1,l+'-'+p2,l+'-Dif');}
+  hdr.push('[OOEE] Total-'+p1,'[OOEE] Total-'+p2,'[OOEE] Total-Dif','Total '+p1,'Total '+p2,'Dif.Final');
+  const mkRow=e=>{const r=[e.legajo,e.cuit,e.apellido,e.nombre,e.empresa,e.cct,e.puesto,e.departamento,e.nroPres_dic,e.nroPres_pre];for(const t of all_tipos){const v=e.deds[t];r.push(v?fN(v.dic):0,v?fN(v.pre):0,v?fN(v.dif):0);}r.push(fN(e.total_ret_dic||0),fN(e.total_ret_pre||0));for(const f of active_ooee_f){const v=e.ooee_rows&&e.ooee_rows[f];r.push(v?fN(v.dic):0,v?fN(v.pre):0,v?fN(v.dif):0);}r.push(fN(e.total_ooee_dic||0),fN(e.total_ooee_pre||0),fN((e.total_ooee_pre||0)-(e.total_ooee_dic||0)),fN(e.total_dic),fN(e.total_pre),fN(e.total_dif_full));return r;};
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdr,...employees.map(mkRow)]),'2 - Comparativa completa');
   const wc=employees.filter(e=>Math.abs(e.total_dif_full)>0.01||e.cargas.some(c=>c.estado!=='sin cambio')).sort((a,b)=>Math.abs(b.total_dif_full)-Math.abs(a.total_dif_full));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdr,...wc.map(mkRow)]),'3 - Solo con cambios');
