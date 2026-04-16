@@ -386,10 +386,23 @@
     line-height: 1.7;
   }
 
-  .scrollable { max-height: calc(100vh - 180px); overflow-y: auto; padding-right: 4px; }
-  .scrollable::-webkit-scrollbar { width: 4px; }
+  .scrollable { max-height: calc(100vh - 180px); overflow-y: auto; padding-right: 4px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .scrollable::-webkit-scrollbar { width: 8px; }
   .scrollable::-webkit-scrollbar-track { background: transparent; }
-  .scrollable::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .scrollable::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  .scrollable::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+
+  .masiva-search { display:flex; gap:8px; margin-bottom:12px; }
+  .masiva-search input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:7px 12px; font-size:13px; outline:none; transition:border-color .15s; }
+  .masiva-search input:focus { border-color:var(--accent); }
+  .masiva-search input::placeholder { color:var(--muted); }
+  .col-legajo { font-family:var(--mono); font-size:12px; color:var(--text2); white-space:nowrap; }
+  .chip-not-found { background:rgba(239,68,68,.13); color:#ef4444; }
+  .detail-section details { margin-bottom:6px; }
+  .detail-section details summary { cursor:pointer; font-weight:600; font-size:12px; color:var(--text2); padding:5px 0 4px 0; user-select:none; list-style:none; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--border); margin-bottom:6px; }
+  .detail-section details summary::-webkit-details-marker { display:none; }
+  .detail-section details summary::before { content:'▶'; font-size:9px; color:var(--muted); transition:transform .15s; }
+  .detail-section details[open] summary::before { transform:rotate(90deg); }
 
   .report-textarea {
     width: 100%;
@@ -836,6 +849,7 @@
   <div class="header-actions">
     <button class="btn-icon" id="btnTheme" onclick="toggleTheme()" title="Cambiar tema">☀️ Claro</button>
     <button class="btn-icon" onclick="toggleSidebar()" title="Referencia rápida">📋 Referencia</button>
+    <button class="btn-icon" id="btnExportErrors" onclick="exportErrorsExcel()" title="Descargar errores en Excel" style="display:none">⬇ Errores</button>
   </div>
 </div>
 
@@ -1051,6 +1065,23 @@
           columnas con los mismos nombres que el reporte de ganancias de Meta 4.<br>
           <strong>Sin Excel:</strong> solo se valida el formato del TXT para todos los empleados.
         </div>
+      </div>
+
+      <div class="field-group" style="margin-top:16px;">
+        <label>Nómina de empleados <span class="badge" style="background:rgba(16,185,129,.15);color:#10b981;">legajo</span></label>
+        <div id="dropzoneNomina" class="dropzone" style="border-color:rgba(16,185,129,0.4);">
+          <input type="file" id="fileNomina" accept=".xlsx,.xls,.csv" />
+          <div class="dropzone-icon" style="background:rgba(16,185,129,0.08)">
+            <svg viewBox="0 0 24 24" stroke-width="1.5" style="stroke:#10b981"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <p><strong>Soltá la nómina acá</strong><br>Excel con columnas: Legajo · Nombre · Apellido · CUIL · Empresa (opcional)</p>
+        </div>
+        <div id="fileInfoNomina" style="display:none" class="file-loaded">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span id="fileNameNomina"></span>
+          <button class="btn-clear" onclick="clearNomina()" title="Quitar">✕</button>
+        </div>
+        <div class="masiva-hint">Opcional. Permite mostrar Legajo en la tabla, detectar empleados sin TXT, y exportar errores con datos completos.</div>
       </div>
 
     </div><!-- /secMasiva -->
@@ -3010,7 +3041,10 @@ function expandConfig() {
 
 // ── MODO INDIVIDUAL / MASIVA ──────────────────────────────
 let currentMode = 'individual';
-let excelContent = null; // ArrayBuffer del Excel cargado
+let excelContent  = null; // ArrayBuffer del Excel Meta4
+let nominaContent = null; // ArrayBuffer de la nómina (legajo/nombre/apellido/cuil/empresa)
+window._nominaData          = null; // [{legajo,nombre,apellido,cuil,empresa}]
+window._lastResultadosMasiva = null; // para exportErrorsExcel
 
 function setMode(mode) {
   currentMode = mode;
@@ -3067,6 +3101,85 @@ function clearExcel() {
   document.getElementById('dropzoneExcel').style.display = 'block';
   document.getElementById('fileInfoExcel').style.display = 'none';
   document.getElementById('fileExcel').value = '';
+}
+
+// ── NÓMINA (legajo / nombre / apellido / empresa) ─────────
+document.addEventListener('DOMContentLoaded', () => {
+  const nomInput = document.getElementById('fileNomina');
+  if (nomInput) nomInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) loadNomina(f); });
+  const dzNom = document.getElementById('dropzoneNomina');
+  if (dzNom) {
+    dzNom.addEventListener('dragover',  e => { e.preventDefault(); dzNom.classList.add('drag-over'); });
+    dzNom.addEventListener('dragleave', () => dzNom.classList.remove('drag-over'));
+    dzNom.addEventListener('drop', e => { e.preventDefault(); dzNom.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) loadNomina(f); });
+  }
+});
+
+function loadNomina(file) {
+  document.getElementById('dropzoneNomina').style.display = 'none';
+  document.getElementById('fileInfoNomina').style.display = 'flex';
+  document.getElementById('fileNameNomina').textContent = file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+  const reader = new FileReader();
+  reader.onload = e => {
+    nominaContent = e.target.result;
+    try { window._nominaData = parseExcelNomina(nominaContent); }
+    catch(err) { window._nominaData = null; console.warn('Error al parsear nómina:', err); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function clearNomina() {
+  nominaContent = null; window._nominaData = null;
+  document.getElementById('dropzoneNomina').style.display = 'block';
+  document.getElementById('fileInfoNomina').style.display = 'none';
+  document.getElementById('fileNomina').value = '';
+}
+
+function parseExcelNomina(buf) {
+  const wb = XLSX.read(buf, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (!rows || rows.length < 2) return [];
+
+  // Detectar fila de headers (primera con ≥2 celdas no vacías)
+  let hdrIdx = 0;
+  for (let i = 0; i < Math.min(rows.length, 8); i++) {
+    if (rows[i].filter(c => String(c).trim()).length >= 2) { hdrIdx = i; break; }
+  }
+
+  const headers = rows[hdrIdx].map(h => normHeader(String(h)));
+  const colOf = key => {
+    const aliases = {
+      legajo:   ['legajo','nro legajo','numero legajo','leg','n legajo','leg nro'],
+      nombre:   ['nombre','first name','nombres'],
+      apellido: ['apellido','apellidos','last name','surname'],
+      cuil:     ['cuil','nro cuil','cuit','cuil empleado','numero cuil'],
+      empresa:  ['empresa','razon social','empleador','company'],
+    };
+    for (const a of (aliases[key] || [])) {
+      const i = headers.indexOf(a);
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  const iLeg = colOf('legajo'), iNom = colOf('nombre'), iApe = colOf('apellido');
+  const iCuil = colOf('cuil'),  iEmp = colOf('empresa');
+
+  const result = [];
+  for (let i = hdrIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.every(c => String(c).trim() === '')) continue;
+    const cuil = iCuil >= 0 ? String(row[iCuil] ?? '').replace(/\D/g, '') : '';
+    result.push({
+      legajo:   iLeg  >= 0 ? String(row[iLeg]  ?? '').trim() : '',
+      nombre:   iNom  >= 0 ? String(row[iNom]  ?? '').trim() : '',
+      apellido: iApe  >= 0 ? String(row[iApe]  ?? '').trim() : '',
+      cuil:     cuil.length >= 10 ? cuil.slice(-11).padStart(11,'0') : cuil,
+      empresa:  iEmp  >= 0 ? String(row[iEmp]  ?? '').trim() : '',
+    });
+  }
+  return result;
 }
 
 // ── EXCEL PARSER (Meta 4) ─────────────────────────────────
@@ -3295,6 +3408,12 @@ async function validarMasiva() {
     excelRows.forEach(r => { if (r.cuil && r.cuil.length === 11) cuilMap.set(r.cuil, r); });
   }
 
+  // 3b. Mapa de nómina por CUIL
+  const nominaMap = new Map();
+  if (window._nominaData) {
+    window._nominaData.forEach(n => { if (n.cuil) nominaMap.set(n.cuil, n); });
+  }
+
   // 4. Validar cada trabajador
   const resultados = [];
   const software = document.getElementById('softwareLiqMasiva').value;
@@ -3307,7 +3426,7 @@ async function validarMasiva() {
     const tErr  = errores.filter(e => e._tidx === i);
     const tWarn = advertencias.filter(e => e._tidx === i);
 
-    // Cruce con Excel
+    // Cruce con Excel Meta4
     let crossResults = null;
     let excelRow = cuilMap.get(cuil);
     if (!excelRow && excelRows && excelRows[i]) excelRow = excelRows[i]; // fallback posición
@@ -3319,24 +3438,41 @@ async function validarMasiva() {
     const crossWarn = crossResults ? crossResults.filter(r => r.status === 'shifted').length  : 0;
     const crossOk   = crossResults ? crossResults.filter(r => r.status === 'ok').length       : 0;
 
-    resultados.push({ t, cuil, nombre: excelRow?.nombre || '', tErr, tWarn, crossResults, crossErr, crossWarn, crossOk, idx: i });
+    // Datos de nómina
+    const nominaRow   = nominaMap.get(cuil) || null;
+    const legajo      = nominaRow?.legajo || '';
+    const nombreNomina = nominaRow ? `${nominaRow.apellido || ''}${nominaRow.apellido && nominaRow.nombre ? ', ' : ''}${nominaRow.nombre || ''}`.trim() : '';
+    const empresa     = nominaRow?.empresa || '';
+    const sinNomina   = window._nominaData != null && !nominaRow;
+
+    resultados.push({ t, cuil, nombre: excelRow?.nombre || '', legajo, nombreNomina, empresa, sinNomina, tErr, tWarn, crossResults, crossErr, crossWarn, crossOk, idx: i });
   }
 
-  renderResultsMasiva(resultados, errores, advertencias, oks, infos, excelMeta);
+  // 5. Empleados en nómina pero sin TXT
+  const cuilesTxt = new Set(resultados.map(r => r.cuil));
+  const sinTxt = window._nominaData
+    ? window._nominaData.filter(n => n.cuil && !cuilesTxt.has(n.cuil))
+    : [];
+
+  window._lastResultadosMasiva = { resultados, sinTxt };
+  renderResultsMasiva(resultados, errores, advertencias, oks, infos, excelMeta, sinTxt);
 }
 
-function renderResultsMasiva(resultados, errores, advertencias, oks, infos, excelMeta) {
+function renderResultsMasiva(resultados, errores, advertencias, oks, infos, excelMeta, sinTxt = []) {
   const container = document.getElementById('resultsContainer');
   const total   = resultados.length;
   const conErr  = resultados.filter(r => r.tErr.length > 0 || r.crossErr > 0).length;
   const conWarn = resultados.filter(r => r.tWarn.length > 0 || r.crossWarn > 0).length;
   const ok      = resultados.filter(r => r.tErr.length === 0 && r.crossErr === 0 && r.crossWarn === 0).length;
+  const sinNominaCount = resultados.filter(r => r.sinNomina).length;
 
   let html = `<div class="masiva-summary-bar">`;
   html += `<div class="summary-chip chip-info">👥 ${total} empleado${total !== 1 ? 's' : ''}</div>`;
   if (conErr)  html += `<div class="summary-chip chip-err">✗ ${conErr} con errores</div>`;
   if (conWarn) html += `<div class="summary-chip chip-warn">↔ ${conWarn} con corrimientos</div>`;
   html += `<div class="summary-chip chip-ok">✓ ${ok} sin problemas</div>`;
+  if (sinNominaCount) html += `<div class="summary-chip chip-not-found">⚠ ${sinNominaCount} sin nómina</div>`;
+  if (sinTxt.length)  html += `<div class="summary-chip chip-not-found">⚠ ${sinTxt.length} en nómina sin TXT</div>`;
   html += `</div>`;
 
   if (excelMeta?.warning) {
@@ -3358,9 +3494,25 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
     html += `</div>`;
   }
 
+  // Sección: empleados en nómina sin TXT
+  if (sinTxt.length) {
+    html += `<div class="result-section" style="margin-bottom:16px;">
+      <div class="result-section-title" style="color:#ef4444;margin-bottom:6px;">Empleados en nómina sin registro en TXT (${sinTxt.length})</div>`;
+    for (const n of sinTxt) {
+      const nombreMostrar = `${n.apellido || ''}${n.apellido && n.nombre ? ', ' : ''}${n.nombre || ''}`.trim() || '—';
+      html += `<div class="result-item item-err" style="margin-bottom:4px"><div class="dot dot-err"></div><div class="msg">Legajo <strong>${n.legajo || '—'}</strong> · CUIL ${n.cuil || '—'} · ${nombreMostrar}${n.empresa ? ' · ' + n.empresa : ''} — no encontrado en el archivo TXT.</div></div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Buscador
+  html += `<div class="masiva-search"><input type="text" id="searchMasiva" placeholder="Buscar por legajo, nombre o CUIL..." oninput="filterMasiva(this.value)"></div>`;
+
   // Tabla resumen
+  const hasNomina = window._nominaData != null;
   html += `<div class="masiva-table-wrap"><table class="masiva-table">
   <thead><tr>
+    ${hasNomina ? '<th class="col-legajo">Legajo</th>' : ''}
     <th>#</th>
     <th>CUIL</th>
     <th>Nombre</th>
@@ -3384,16 +3536,24 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
       : r.crossWarn > 0 ? `<span class="cross-warn">↔ ${r.crossWarn}</span>`
       : `<span class="cross-ok">✓ ${r.crossOk}</span>`;
 
-    html += `<tr class="${rowCls}" id="row-${r.idx}">
+    const nombreMostrar = r.nombreNomina || r.nombre || '';
+    const legajoCell = r.sinNomina
+      ? `<td class="col-legajo"><span style="color:#ef4444" title="No encontrado en nómina">—</span></td>`
+      : `<td class="col-legajo">${r.legajo || '<span style="color:var(--muted)">—</span>'}</td>`;
+
+    const searchStr = `${r.legajo} ${r.nombreNomina} ${r.nombre} ${r.cuil}`.toLowerCase();
+
+    html += `<tr class="${rowCls}" id="row-${r.idx}" data-search="${searchStr.replace(/"/g,'').trim()}">
+      ${hasNomina ? legajoCell : ''}
       <td class="col-num">${r.idx + 1}</td>
       <td class="col-cuil">${r.cuil && r.cuil.length === 11 ? `${r.cuil.slice(0,2)}-${r.cuil.slice(2,10)}-${r.cuil.slice(10)}` : r.cuil || '—'}</td>
-      <td>${r.nombre || '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${nombreMostrar || '<span style="color:var(--muted)">—</span>'}</td>
       <td class="col-icon">${txtIcon}</td>
       <td class="col-icon">${cruceIcon}</td>
       <td class="col-detail"><button class="btn-ver" onclick="toggleDetail(${r.idx})">Ver</button></td>
     </tr>
     <tr class="detail-row" id="detail-row-${r.idx}">
-      <td colspan="6"><div class="detail-inner" id="detail-${r.idx}">
+      <td colspan="${hasNomina ? 7 : 6}"><div class="detail-inner" id="detail-${r.idx}">
         ${renderDetailMasiva(r)}
       </div></td>
     </tr>`;
@@ -3402,24 +3562,54 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
   html += `</tbody></table></div>`;
   container.innerHTML = html;
 
+  // Mostrar botón de exportar errores
+  const btnExp = document.getElementById('btnExportErrors');
+  if (btnExp) btnExp.style.display = '';
+
   // Colapsar panel de config al mostrar resultados
   collapseConfig();
 }
 
 function renderDetailMasiva(r) {
-  let h = '';
+  let h = '<div class="detail-section">';
+  let hasContent = false;
+
+  // Cabecera con legajo/empresa si hay nómina
+  if (r.legajo || r.empresa) {
+    h += `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">`;
+    if (r.legajo)  h += `Legajo: <strong style="color:var(--text)">${r.legajo}</strong>`;
+    if (r.empresa) h += `${r.legajo ? ' · ' : ''}Empresa: <strong style="color:var(--text)">${r.empresa}</strong>`;
+    h += `</div>`;
+  }
+  if (r.sinNomina) {
+    h += `<div class="result-item item-warn" style="margin-bottom:8px"><div class="dot dot-warn"></div><div class="msg">CUIL no encontrado en la nómina cargada.</div></div>`;
+    hasContent = true;
+  }
+
   if (r.tErr.length || r.tWarn.length) {
-    h += `<div class="result-section-title" style="margin-bottom:8px">Errores de formato TXT</div>`;
+    hasContent = true;
+    const count = r.tErr.length + r.tWarn.length;
+    h += `<details open><summary>Errores de formato TXT <span class="badge" style="background:${r.tErr.length?'rgba(239,68,68,.15)':'rgba(251,191,36,.15)'};color:${r.tErr.length?'#ef4444':'#f59e0b'}">${count}</span></summary>`;
     for (const e of r.tErr)
       h += `<div class="result-item item-err" style="margin-bottom:4px"><div class="dot dot-err"></div><div class="msg">${e.msg}${e.pos?`<div class="pos-badge pos-err">${e.pos}</div>`:''}</div></div>`;
     for (const w of r.tWarn)
       h += `<div class="result-item item-warn" style="margin-bottom:4px"><div class="dot dot-warn"></div><div class="msg">${w.msg}</div></div>`;
+    h += `</details>`;
   }
+
   if (r.crossResults) {
-    h += `<div class="result-section-title" style="margin-top:12px;margin-bottom:8px">Cruce con reporte — Meta 4</div>`;
+    hasContent = true;
+    const cErr = r.crossErr, cWarn = r.crossWarn, cOk = r.crossOk;
+    const badgeColor = cErr ? 'rgba(239,68,68,.15)' : cWarn ? 'rgba(251,191,36,.15)' : 'rgba(34,197,94,.15)';
+    const badgeTxt   = cErr ? '#ef4444' : cWarn ? '#f59e0b' : '#22c55e';
+    const badgeLabel = cErr ? `✗ ${cErr}` : cWarn ? `↔ ${cWarn}` : `✓ ${cOk}`;
+    h += `<details open><summary>Cruce con reporte — Meta 4 <span class="badge" style="background:${badgeColor};color:${badgeTxt}">${badgeLabel}</span></summary>`;
     h += buildCrossTableHTML(r.crossResults, { showPatch: false, idSuffix: `-${r.idx}` });
+    h += `</details>`;
   }
-  if (!h) h = `<span style="color:var(--muted);font-size:12px;">Sin errores ni advertencias para este empleado.</span>`;
+
+  if (!hasContent) h += `<span style="color:var(--muted);font-size:12px;">Sin errores ni advertencias para este empleado.</span>`;
+  h += '</div>';
   return h;
 }
 
@@ -3429,6 +3619,51 @@ function toggleDetail(idx) {
   const open = div.classList.toggle('open');
   if (btn) btn.classList.toggle('open', open);
   if (btn) btn.textContent = open ? 'Cerrar' : 'Ver';
+}
+
+function filterMasiva(q) {
+  const term = (q || '').toLowerCase().trim();
+  const rows = document.querySelectorAll('#resultsContainer tbody tr[data-search]');
+  rows.forEach(tr => {
+    const match = !term || tr.dataset.search.includes(term);
+    tr.style.display = match ? '' : 'none';
+    const detail = tr.nextElementSibling;
+    if (detail?.classList.contains('detail-row')) detail.style.display = match ? '' : 'none';
+  });
+}
+
+function exportErrorsExcel() {
+  const data = window._lastResultadosMasiva;
+  if (!data) return;
+  const rows = [['Legajo', 'CUIL', 'Nombre', 'Empresa', 'Tipo', 'Descripción', 'Registro', 'Posición']];
+  for (const r of data.resultados) {
+    const leg  = r.legajo || '';
+    const cuil = r.cuil   || '';
+    const nom  = r.nombreNomina || r.nombre || '';
+    const emp  = r.empresa || '';
+    for (const e of r.tErr)
+      rows.push([leg, cuil, nom, emp, 'Error TXT', e.msg, e.rec || '', e.pos || '']);
+    for (const w of r.tWarn)
+      rows.push([leg, cuil, nom, emp, 'Advertencia TXT', w.msg, w.rec || '', w.pos || '']);
+    if (r.crossResults) {
+      for (const c of r.crossResults.filter(x => x.status === 'mismatch' || x.status === 'shifted')) {
+        const tipo = c.status === 'mismatch' ? 'Discrepancia cruce' : 'Corrimiento cruce';
+        const desc = `${c.f1359Name || ''}: TXT=${c.txtExact != null ? c.txtExact : '—'}  Reporte=${c.repVal != null ? c.repVal : '—'}`;
+        rows.push([leg, cuil, nom, emp, tipo, desc, c.posDesc || '', '']);
+      }
+    }
+  }
+  for (const n of (data.sinTxt || [])) {
+    const nom = `${n.apellido || ''}${n.apellido && n.nombre ? ', ' : ''}${n.nombre || ''}`.trim();
+    rows.push([n.legajo || '', n.cuil || '', nom, n.empresa || '', 'Sin TXT', 'Empleado en nómina sin registro en el archivo TXT', '', '']);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Auto-ancho básico
+  const colWidths = rows[0].map((_, ci) => ({ wch: Math.min(60, Math.max(12, ...rows.map(r => String(r[ci] || '').length))) }));
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Errores F1359');
+  XLSX.writeFile(wb, 'errores_f1359.xlsx');
 }
 
 // ── PARSEO TXT — núcleo compartido por individual y masiva ────────────────
@@ -3537,6 +3772,7 @@ function _parseTxtCore(lines, errores, advertencias, oks, infos, anio, tipoEsper
   }
 
   // ── Post-loop: validaciones por trabajador ───────────────
+  const tipoPres = reg01 && reg01.length === 38 ? str(reg01, 33, 1) : null;
   for (const t of trabajadores) {
     currentTidx = t.idx - 1;
     const idx = t.idx;
@@ -3607,6 +3843,11 @@ function _parseTxtCore(lines, errores, advertencias, oks, infos, anio, tipoEsper
           if (interesesHip > topes.intereses_hip) pe({ msg: `Trabajador #${idx} — Reg.05: Intereses Hipotecarios ($${interesesHip.toLocaleString('es-AR',{minimumFractionDigits:2})}) supera el tope de $${topes.intereses_hip.toLocaleString('es-AR')} (fijo por ley).`, rec: `Línea ${ln05}`, pos: p('05','21') });
           if (sepelio > topes.sepelio)             pe({ msg: `Trabajador #${idx} — Reg.05: Gastos de Sepelio ($${sepelio.toLocaleString('es-AR',{minimumFractionDigits:2})}) supera el tope de $${topes.sepelio.toLocaleString('es-AR',{minimumFractionDigits:2})}.`, rec: `Línea ${ln05}`, pos: p('05','15') });
 
+          // Extraer campos para regla 5% (se valida más abajo, cuando se tiene Reg.08 C3)
+          const c11_r05 = num(r05, 134, 15); // Cuotas Médico Asistenciales
+          const c17_r05 = num(r05, 224, 15); // Donaciones Fiscos (Art.26 inc.e/f LIG)
+          const c20_r05 = num(r05, 269, 15); // Honorarios Asistencia Sanitaria/Médica
+
           if (r06 && r06.length === 160) {
             const gni         = num(r06, 14,15), conyuge    = num(r06, 29,15);
             const hijos        = num(r06, 48,15), hijosInc  = num(r06, 67,15);
@@ -3633,7 +3874,17 @@ function _parseTxtCore(lines, errores, advertencias, oks, infos, anio, tipoEsper
             } else {
               pok({ msg: `Trabajador #${idx} — Reg.06: Total Deducciones Art. 30 cuadra.`, rec: `Línea ${ln06}`, pos: p('06','15') });
             }
-            if (gni/100 > topes.gni * 1.01) pw({ msg: `Trabajador #${idx} — Reg.06: Ganancia No Imponible ($${(gni/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) excede el tope ${anio} de $${topes.gni.toLocaleString('es-AR',{minimumFractionDigits:2})}.`, rec: `Línea ${ln06}`, pos: p('06','3') });
+            if (gni/100 > topes.gni * 1.01) pe({ msg: `Trabajador #${idx} — Reg.06: Ganancia No Imponible ($${(gni/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) excede el tope ${anio} de $${topes.gni.toLocaleString('es-AR',{minimumFractionDigits:2})}.`, rec: `Línea ${ln06}`, pos: p('06','3') });
+            // Tope cónyuge/UC: C4 ≤ GNI
+            if (conyuge/100 > topes.gni * 1.01) pe({ msg: `Trabajador #${idx} — Reg.06: Cónyuge/Unión Convivencial ($${(conyuge/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) supera el tope ${anio} de GNI = $${topes.gni.toLocaleString('es-AR',{minimumFractionDigits:2})}.`, rec: `Línea ${ln06}`, pos: p('06','4') });
+            // Tope hijos: C7 ≤ (cant50% × GNI×0.25) + (cant100% × GNI×0.5)
+            const c5_h = num(r06, 44, 2), c6_h = num(r06, 46, 2);
+            const maxHijosP = c5_h * topes.gni * 0.25 + c6_h * topes.gni * 0.5;
+            if (maxHijosP > 0 && hijos/100 > maxHijosP * 1.01) pe({ msg: `Trabajador #${idx} — Reg.06: Hijos/Hijastros ($${(hijos/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) supera el máximo calculado $${maxHijosP.toLocaleString('es-AR',{minimumFractionDigits:2})} (${c5_h} al 50% + ${c6_h} al 100% × GNI ${anio}).`, rec: `Línea ${ln06}`, pos: p('06','7') });
+            // Tope hijos incapacitados: C10 ≤ (cant50% × GNI×0.5) + (cant100% × GNI)
+            const c8_h = num(r06, 63, 2), c9_h = num(r06, 65, 2);
+            const maxHijosIncP = c8_h * topes.gni * 0.5 + c9_h * topes.gni;
+            if (maxHijosIncP > 0 && hijosInc/100 > maxHijosIncP * 1.01) pe({ msg: `Trabajador #${idx} — Reg.06: Hijos/Hijastros incapacitados ($${(hijosInc/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) supera el máximo calculado $${maxHijosIncP.toLocaleString('es-AR',{minimumFractionDigits:2})} (${c8_h} al 50% + ${c9_h} al 100% × GNI ${anio}).`, rec: `Línea ${ln06}`, pos: p('06','10') });
             // ARCA 13592612: TOTAL DED. ART.30 ≤ Rem. Gravada + No Gravada (Art. 25 LIG)
             const maxDedArt30 = totalGravada + totalNoGravada;
             if (totalArt30 > maxDedArt30 + 1) pe({ msg: `Trabajador #${idx} — Reg.06: TOTAL DED. ART. 30 ($${(totalArt30/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) supera Rem. Gravada + No Gravada ($${(maxDedArt30/100).toLocaleString('es-AR',{minimumFractionDigits:2})}). Art. 25 LIG. Código ARCA 13592612.`, rec: `Línea ${ln06}`, pos: p('06','15') });
@@ -3647,6 +3898,12 @@ function _parseTxtCore(lines, errores, advertencias, oks, infos, anio, tipoEsper
                 pe({ msg: `Trabajador #${idx} — Reg.08: REMUNERACIÓN SUJETA A IMPUESTO (${remSujetaImp.toLocaleString('es-AR')}) ≠ Rem. Gravada − Ded. Generales − Ded. Art.30 = ${esperadoRSI.toLocaleString('es-AR')}.`, rec: `Línea ${ln08}`, pos: p('08','3') });
               } else {
                 pok({ msg: `Trabajador #${idx} — Reg.08: Remuneración Sujeta a Impuesto cuadra.`, rec: `Línea ${ln08}`, pos: p('08','3') });
+              }
+              // Reg.05 C11+C17+C20 ≤ 5% de la ganancia neta (Reg.08 C3)
+              if (remSujetaImp > 0) {
+                const sumMedEdu = c11_r05 + c17_r05 + c20_r05;
+                const limite5pct = Math.floor(remSujetaImp * 0.05);
+                if (sumMedEdu > limite5pct + 1) pe({ msg: `Trabajador #${idx} — Reg.05: Cuotas Médico Asistenciales + Donaciones + Honorarios Médicos ($${(sumMedEdu/100).toLocaleString('es-AR',{minimumFractionDigits:2})}) supera el 5% de la ganancia neta sujeta a impuesto ($${(limite5pct/100).toLocaleString('es-AR',{minimumFractionDigits:2})}). Art.81 LIG.`, rec: `Línea ${ln05}`, pos: `${p('05','11')} + ${p('05','17')} + ${p('05','20')}` });
               }
               // Impuesto Retenido debería ser 0 en liquidaciones anuales/finales
               if (impRet > 0) {
@@ -3676,6 +3933,7 @@ function _parseTxtCore(lines, errores, advertencias, oks, infos, anio, tipoEsper
                 } else {
                   pok({ msg: `Trabajador #${idx} — Reg.07: Total Pagos a Cuenta cuadra.`, rec: `Línea ${ln07}`, pos: p('07','13') });
                 }
+                if (tipoPres === '3' && totalPagos !== 0) pe({ msg: `Trabajador #${idx} — Reg.07: Presentación Informativa (tipo 3) — TOTAL PAGOS A CUENTA debe ser 0. Encontrado: $${(totalPagos/100).toLocaleString('es-AR',{minimumFractionDigits:2})}.`, rec: `Línea ${ln07}`, pos: p('07','13') });
               }
               const esperadoSaldo = subtotal - autoret - totalPagos;
               if (Math.abs(saldoDet - Math.max(0, esperadoSaldo)) > 1) {
