@@ -504,11 +504,11 @@
 
   /* ── TABLA RESUMEN MASIVA ──────────────────────────── */
   .masiva-summary-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
-  /* resumen colapsable */
-  #resultsContainer details > summary { list-style:none; }
-  #resultsContainer details > summary::-webkit-details-marker { display:none; }
-  #resultsContainer details > summary::after { content:'▾'; font-size:14px; color:var(--muted); margin-left:6px; transition:transform .15s; display:inline-block; }
-  #resultsContainer details:not([open]) > summary::after { transform:rotate(-90deg); }
+  /* chips como filtros */
+  .masiva-filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+  .chip-filter { cursor:pointer; border:none; font-family:inherit; transition:opacity .15s, box-shadow .15s; }
+  .chip-filter:hover { opacity:.85; }
+  .chip-filter-active { box-shadow: 0 0 0 2px var(--accent), inset 0 0 0 1px rgba(255,255,255,.1) !important; opacity:1 !important; }
   .masiva-table-wrap { overflow-x:auto; }
   .masiva-table {
     width: 100%;
@@ -3560,15 +3560,15 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
   const ok           = resultados.filter(r => r.tErr.length === 0 && r.crossErr === 0 && r.crossWarn === 0).length;
   const sinNominaCount = resultados.filter(r => r.sinNomina).length;
 
-  let html = `<details open><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;user-select:none;">`;
-  html += `<span class="summary-chip chip-info" style="cursor:pointer;">👥 ${total} empleado${total !== 1 ? 's' : ''}</span>`;
-  if (conErrTxt)  html += `<span class="summary-chip chip-err">✗ ${conErrTxt} con errores ARCA</span>`;
-  if (conErrDif)  html += `<span class="summary-chip chip-err">⚡ ${conErrDif} con diferencias</span>`;
-  if (conWarn)    html += `<span class="summary-chip chip-warn">⚠ ${conWarn} con advertencias</span>`;
-  html += `<span class="summary-chip chip-ok">✓ ${ok} sin problemas</span>`;
-  if (sinNominaCount) html += `<span class="summary-chip chip-not-found">⚠ ${sinNominaCount} sin nómina</span>`;
+  let html = `<div class="masiva-filter-bar">`;
+  html += `<button class="summary-chip chip-info chip-filter" data-filter="all" onclick="applyChipFilter(this)">👥 ${total} empleado${total !== 1 ? 's' : ''}</button>`;
+  if (conErrTxt)  html += `<button class="summary-chip chip-err chip-filter" data-filter="errARCA" onclick="applyChipFilter(this)">✗ ${conErrTxt} con errores ARCA</button>`;
+  if (conErrDif)  html += `<button class="summary-chip chip-err chip-filter" data-filter="dif" onclick="applyChipFilter(this)">⚡ ${conErrDif} con diferencias</button>`;
+  if (conWarn)    html += `<button class="summary-chip chip-warn chip-filter" data-filter="adv" onclick="applyChipFilter(this)">⚠ ${conWarn} con advertencias</button>`;
+  html += `<button class="summary-chip chip-ok chip-filter" data-filter="ok" onclick="applyChipFilter(this)">✓ ${ok} sin problemas</button>`;
+  if (sinNominaCount) html += `<button class="summary-chip chip-not-found chip-filter" data-filter="sinNomina" onclick="applyChipFilter(this)">⚠ ${sinNominaCount} sin nómina</button>`;
   if (sinTxt.length)  html += `<span class="summary-chip chip-not-found">⚠ ${sinTxt.length} en nómina sin TXT</span>`;
-  html += `</summary>`;
+  html += `</div>`;
 
   if (excelMeta?.warning) {
     html += `<div class="result-item item-warn" style="margin-bottom:12px"><div class="dot dot-warn"></div><div class="msg">${excelMeta.warning}</div></div>`;
@@ -3611,25 +3611,44 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
     <th>#</th>
     <th>CUIL</th>
     <th>Nombre</th>
-    <th class="col-icon" title="Errores de formato según manual ARCA">Error</th>
+    <th class="col-icon" title="Errores de formato según manual ARCA">ARCA</th>
     <th class="col-icon" title="Diferencias TXT vs reporte de liquidación">Dif.</th>
+    <th class="col-icon" title="Advertencias">Adv.</th>
     <th class="col-detail">Detalle</th>
   </tr></thead><tbody>`;
 
+  const colSpan = hasNomina ? 8 : 7;
+
   for (const r of resultados) {
-    const hasErr  = r.tErr.length > 0 || r.crossErr > 0;
-    const hasWarn = r.tWarn.length > 0 || r.crossWarn > 0;
-    const rowCls  = hasErr ? 'has-err' : hasWarn ? 'has-warn' : '';
+    const isErrARCA  = r.tErr.length > 0;
+    const isDif      = r.crossErr > 0;
+    const isAdv      = r.tWarn.length > 0 || r.crossWarn > 0;
+    const isOk       = !isErrARCA && !isDif && !isAdv;
+    const isSinNomina = r.sinNomina;
 
-    const txtIcon = r.tErr.length > 0 ? `<span class="cross-err" title="${r.tErr.length} error(es)">✗ ${r.tErr.length}</span>`
-                  : r.tWarn.length > 0 ? `<span class="cross-warn" title="${r.tWarn.length} advertencia(s)">⚠ ${r.tWarn.length}</span>`
-                  : `<span class="cross-ok">✓</span>`;
+    const cats = [
+      isErrARCA   ? 'errARCA'   : '',
+      isDif       ? 'dif'       : '',
+      isAdv       ? 'adv'       : '',
+      isOk        ? 'ok'        : '',
+      isSinNomina ? 'sinNomina' : '',
+    ].filter(Boolean).join(' ');
 
-    const cruceIcon = r.crossResults === null
+    const rowCls = isErrARCA || isDif ? 'has-err' : isAdv ? 'has-warn' : '';
+
+    const arcaIcon = isErrARCA
+      ? `<span class="cross-err" title="${r.tErr.length} error(es) ARCA">✗ ${r.tErr.length}</span>`
+      : `<span class="cross-ok">✓</span>`;
+
+    const difIcon = r.crossResults === null
       ? `<span class="cross-skip">—</span>`
-      : r.crossErr > 0  ? `<span class="cross-err">✗ ${r.crossErr}</span>`
-      : r.crossWarn > 0 ? `<span class="cross-warn">↔ ${r.crossWarn}</span>`
-      : `<span class="cross-ok">✓ ${r.crossOk}</span>`;
+      : isDif       ? `<span class="cross-err" title="${r.crossErr} diferencia(s)">⚡ ${r.crossErr}</span>`
+      : r.crossOk   ? `<span class="cross-ok">✓ ${r.crossOk}</span>`
+      : `<span class="cross-skip">—</span>`;
+
+    const advIcon = isAdv
+      ? `<span class="cross-warn" title="${r.tWarn.length + r.crossWarn} advertencia(s)">⚠ ${r.tWarn.length + r.crossWarn}</span>`
+      : `<span class="cross-ok">✓</span>`;
 
     const nombreMostrar = r.nombreNomina || r.nombre || '';
     const legajoCell = r.sinNomina
@@ -3638,24 +3657,24 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
 
     const searchStr = `${r.legajo} ${r.nombreNomina} ${r.nombre} ${r.cuil}`.toLowerCase();
 
-    html += `<tr class="${rowCls}" id="row-${r.idx}" data-search="${searchStr.replace(/"/g,'').trim()}">
+    html += `<tr class="${rowCls}" id="row-${r.idx}" data-search="${searchStr.replace(/"/g,'').trim()}" data-cats="${cats}">
       ${hasNomina ? legajoCell : ''}
       <td class="col-num">${r.idx + 1}</td>
       <td class="col-cuil">${r.cuil && r.cuil.length === 11 ? `${r.cuil.slice(0,2)}-${r.cuil.slice(2,10)}-${r.cuil.slice(10)}` : r.cuil || '—'}</td>
       <td>${nombreMostrar || '<span style="color:var(--muted)">—</span>'}</td>
-      <td class="col-icon">${txtIcon}</td>
-      <td class="col-icon">${cruceIcon}</td>
+      <td class="col-icon">${arcaIcon}</td>
+      <td class="col-icon">${difIcon}</td>
+      <td class="col-icon">${advIcon}</td>
       <td class="col-detail"><button class="btn-ver" onclick="toggleDetail(${r.idx})">Ver</button></td>
     </tr>
     <tr class="detail-row" id="detail-row-${r.idx}">
-      <td colspan="${hasNomina ? 7 : 6}"><div class="detail-inner" id="detail-${r.idx}">
+      <td colspan="${colSpan}"><div class="detail-inner" id="detail-${r.idx}">
         ${renderDetailMasiva(r)}
       </div></td>
     </tr>`;
   }
 
   html += `</tbody></table></div>`;
-  html += `</details>`;
   container.innerHTML = html;
 
   // Mostrar botón de exportar errores
@@ -3715,14 +3734,32 @@ function toggleDetail(idx) {
   if (btn) btn.textContent = open ? 'Cerrar' : 'Ver';
 }
 
+let _activeChipFilter = 'all';
+
+function applyChipFilter(btn) {
+  const filter = btn.dataset.filter;
+  _activeChipFilter = _activeChipFilter === filter && filter !== 'all' ? 'all' : filter;
+  // Update active style on all chips
+  document.querySelectorAll('#resultsContainer .chip-filter').forEach(b => {
+    b.classList.toggle('chip-filter-active', b.dataset.filter === _activeChipFilter);
+  });
+  _applyFilters();
+}
+
 function filterMasiva(q) {
-  const term = (q || '').toLowerCase().trim();
+  _applyFilters();
+}
+
+function _applyFilters() {
+  const term = ((document.getElementById('searchMasiva')?.value) || '').toLowerCase().trim();
   const rows = document.querySelectorAll('#resultsContainer tbody tr[data-search]');
   rows.forEach(tr => {
-    const match = !term || tr.dataset.search.includes(term);
-    tr.style.display = match ? '' : 'none';
+    const matchText = !term || tr.dataset.search.includes(term);
+    const matchCat  = _activeChipFilter === 'all' || (tr.dataset.cats || '').split(' ').includes(_activeChipFilter);
+    const show = matchText && matchCat;
+    tr.style.display = show ? '' : 'none';
     const detail = tr.nextElementSibling;
-    if (detail?.classList.contains('detail-row')) detail.style.display = match ? '' : 'none';
+    if (detail?.classList.contains('detail-row')) detail.style.display = show ? '' : 'none';
   });
 }
 
