@@ -504,6 +504,11 @@
 
   /* ── TABLA RESUMEN MASIVA ──────────────────────────── */
   .masiva-summary-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
+  /* resumen colapsable */
+  #resultsContainer details > summary { list-style:none; }
+  #resultsContainer details > summary::-webkit-details-marker { display:none; }
+  #resultsContainer details > summary::after { content:'▾'; font-size:14px; color:var(--muted); margin-left:6px; transition:transform .15s; display:inline-block; }
+  #resultsContainer details:not([open]) > summary::after { transform:rotate(-90deg); }
   .masiva-table-wrap { overflow-x:auto; }
   .masiva-table {
     width: 100%;
@@ -848,8 +853,10 @@
   </div>
   <div class="header-actions">
     <button class="btn-icon" id="btnTheme" onclick="toggleTheme()" title="Cambiar tema">☀️ Claro</button>
+    <button class="btn-icon" onclick="toggleAyuda()" title="Qué hace este control · Paso a paso">❓ Ayuda</button>
     <button class="btn-icon" onclick="toggleSidebar()" title="Referencia rápida">📋 Referencia</button>
-    <button class="btn-icon" id="btnExportErrors" onclick="exportErrorsExcel()" title="Descargar errores en Excel" style="display:none">⬇ Errores</button>
+    <button class="btn-icon" onclick="window.open('https://auth.afip.gob.ar/contribuyente_/login.xhtml','_blank')" title="Ir a ARCA (AFIP)">🏛 ARCA</button>
+    <button class="btn-icon" id="btnExportErrors" onclick="exportErrorsExcel()" title="Descargar errores en Excel" style="display:none">📊 Errores</button>
   </div>
 </div>
 
@@ -862,6 +869,83 @@
   </div>
   <div class="err-sidebar-body" id="errSidebarBody">
     <div style="color:var(--muted);font-size:12px;padding:16px">Validar un archivo para ver el detalle.</div>
+  </div>
+</div>
+
+<!-- AYUDA MODAL -->
+<div class="sidebar-overlay" id="ayudaOverlay" onclick="toggleAyuda()"></div>
+<div class="sidebar" id="ayudaPanel">
+  <div class="sidebar-head">
+    <h2>❓ Qué hace este control</h2>
+    <button class="sidebar-close" onclick="toggleAyuda()">✕</button>
+  </div>
+  <div class="sidebar-body" style="padding:16px;overflow-y:auto;flex:1;">
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">¿Para qué sirve?</div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin:0 0 8px">
+        Este validador controla que el archivo <strong>TXT del Formulario 1.359</strong> que genera el sistema de liquidación de sueldos sea <strong>consistente con las reglas del Manual del Desarrollador de ARCA</strong> y, si se carga un reporte Excel (Meta 4), también verifica que los <strong>importes del TXT coincidan con el resumen de ganancias liquidado</strong>.
+      </p>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin:0">
+        Si se carga una <strong>nómina de empleados</strong> (Excel con Legajo, CUIL, etc.) el sistema muestra el número de legajo en la tabla y detecta empleados presentes en la nómina pero ausentes en el TXT.
+      </p>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Tipos de problemas detectados</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="color:#ef4444;font-weight:700;min-width:52px">Error</span>
+          <span style="color:var(--text2)">Incumplimiento de una regla formal del manual ARCA (longitud de campo, código inválido, tope de deducciones, etc.).</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="color:#f59e0b;font-weight:700;min-width:52px">Diferencia</span>
+          <span style="color:var(--text2)">El importe del TXT no coincide con el que figura en el reporte de liquidación cargado (Meta 4 u otro sistema).</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="color:#22c55e;font-weight:700;min-width:52px">OK</span>
+          <span style="color:var(--text2)">Campo validado sin observaciones.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Paso a paso — Nómina completa</div>
+      <ol style="font-size:12px;color:var(--text2);line-height:1.8;margin:0;padding-left:18px;">
+        <li>Seleccioná el <strong>año fiscal</strong> y el <strong>tipo de presentación</strong>.</li>
+        <li>Cargá el <strong>archivo TXT</strong> generado por el sistema de liquidación (puede tener múltiples empleados).</li>
+        <li><em>(Opcional)</em> Cargá el <strong>reporte Excel de ganancias</strong> (Meta 4 u equivalente) para validar importes.</li>
+        <li><em>(Opcional)</em> Cargá la <strong>nómina de empleados</strong> para mostrar legajos y detectar ausentes en el TXT.</li>
+        <li>Hacé clic en <strong>Validar</strong>.</li>
+        <li>Revisá el resumen: chips de totales, tabla por empleado, columnas <em>Error</em> (formato ARCA) y <em>Diferencia</em> (cruce con reporte).</li>
+        <li>Usá el <strong>buscador</strong> para filtrar por legajo, nombre o CUIL.</li>
+        <li>Descargá el detalle en Excel con <strong>📊 Errores</strong> para compartirlo o archivarlo.</li>
+      </ol>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Paso a paso — Individual</div>
+      <ol style="font-size:12px;color:var(--text2);line-height:1.8;margin:0;padding-left:18px;">
+        <li>Seleccioná el <strong>año fiscal</strong> y el <strong>tipo de presentación</strong>.</li>
+        <li>Cargá el <strong>archivo TXT individual</strong> del empleado.</li>
+        <li><em>(Opcional)</em> Cargá el <strong>reporte Excel</strong> para cruzar importes.</li>
+        <li>Hacé clic en <strong>Validar</strong> y revisá el resultado.</li>
+        <li>Si hay errores corregibles, usá los botones de <strong>Aplicar corrección</strong> para parchear el TXT y descargarlo.</li>
+      </ol>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Columnas de la tabla masiva</div>
+      <div style="font-size:12px;color:var(--text2);display:flex;flex-direction:column;gap:4px;">
+        <div><strong>Legajo</strong> — número de legajo (requiere nómina cargada).</div>
+        <div><strong>CUIL</strong> — identificador del empleado en el TXT.</div>
+        <div><strong>Nombre</strong> — tomado de la nómina o del reporte Meta 4.</div>
+        <div><strong>Error</strong> — errores de formato según manual ARCA.</div>
+        <div><strong>Diferencia</strong> — discrepancias al cruzar TXT con reporte de liquidación.</div>
+        <div><strong>Detalle</strong> — botón para expandir el panel de ese empleado.</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2962,6 +3046,15 @@ function applyTxtPatch(btn) {
   btn.style.color = '#fff';
 }
 
+// ── AYUDA ────────────────────────────────────────────────
+function toggleAyuda() {
+  const panel = document.getElementById('ayudaPanel');
+  const ov    = document.getElementById('ayudaOverlay');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  ov.classList.toggle('open', !isOpen);
+}
+
 // ── SIDEBAR ───────────────────────────────────────────────
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
@@ -3460,20 +3553,22 @@ async function validarMasiva() {
 
 function renderResultsMasiva(resultados, errores, advertencias, oks, infos, excelMeta, sinTxt = []) {
   const container = document.getElementById('resultsContainer');
-  const total   = resultados.length;
-  const conErr  = resultados.filter(r => r.tErr.length > 0 || r.crossErr > 0).length;
-  const conWarn = resultados.filter(r => r.tWarn.length > 0 || r.crossWarn > 0).length;
-  const ok      = resultados.filter(r => r.tErr.length === 0 && r.crossErr === 0 && r.crossWarn === 0).length;
+  const total        = resultados.length;
+  const conErrTxt    = resultados.filter(r => r.tErr.length > 0).length;
+  const conErrDif    = resultados.filter(r => r.crossErr > 0).length;
+  const conWarn      = resultados.filter(r => r.tWarn.length > 0 || r.crossWarn > 0).length;
+  const ok           = resultados.filter(r => r.tErr.length === 0 && r.crossErr === 0 && r.crossWarn === 0).length;
   const sinNominaCount = resultados.filter(r => r.sinNomina).length;
 
-  let html = `<div class="masiva-summary-bar">`;
-  html += `<div class="summary-chip chip-info">👥 ${total} empleado${total !== 1 ? 's' : ''}</div>`;
-  if (conErr)  html += `<div class="summary-chip chip-err">✗ ${conErr} con errores</div>`;
-  if (conWarn) html += `<div class="summary-chip chip-warn">↔ ${conWarn} con corrimientos</div>`;
-  html += `<div class="summary-chip chip-ok">✓ ${ok} sin problemas</div>`;
-  if (sinNominaCount) html += `<div class="summary-chip chip-not-found">⚠ ${sinNominaCount} sin nómina</div>`;
-  if (sinTxt.length)  html += `<div class="summary-chip chip-not-found">⚠ ${sinTxt.length} en nómina sin TXT</div>`;
-  html += `</div>`;
+  let html = `<details open><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;user-select:none;">`;
+  html += `<span class="summary-chip chip-info" style="cursor:pointer;">👥 ${total} empleado${total !== 1 ? 's' : ''}</span>`;
+  if (conErrTxt)  html += `<span class="summary-chip chip-err">✗ ${conErrTxt} con errores ARCA</span>`;
+  if (conErrDif)  html += `<span class="summary-chip chip-err">⚡ ${conErrDif} con diferencias</span>`;
+  if (conWarn)    html += `<span class="summary-chip chip-warn">⚠ ${conWarn} con advertencias</span>`;
+  html += `<span class="summary-chip chip-ok">✓ ${ok} sin problemas</span>`;
+  if (sinNominaCount) html += `<span class="summary-chip chip-not-found">⚠ ${sinNominaCount} sin nómina</span>`;
+  if (sinTxt.length)  html += `<span class="summary-chip chip-not-found">⚠ ${sinTxt.length} en nómina sin TXT</span>`;
+  html += `</summary>`;
 
   if (excelMeta?.warning) {
     html += `<div class="result-item item-warn" style="margin-bottom:12px"><div class="dot dot-warn"></div><div class="msg">${excelMeta.warning}</div></div>`;
@@ -3516,8 +3611,8 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
     <th>#</th>
     <th>CUIL</th>
     <th>Nombre</th>
-    <th class="col-icon" title="Formato TXT">TXT</th>
-    <th class="col-icon" title="Cruce reporte">Cruce</th>
+    <th class="col-icon" title="Errores de formato según manual ARCA">Error</th>
+    <th class="col-icon" title="Diferencias TXT vs reporte de liquidación">Dif.</th>
     <th class="col-detail">Detalle</th>
   </tr></thead><tbody>`;
 
@@ -3560,6 +3655,7 @@ function renderResultsMasiva(resultados, errores, advertencias, oks, infos, exce
   }
 
   html += `</tbody></table></div>`;
+  html += `</details>`;
   container.innerHTML = html;
 
   // Mostrar botón de exportar errores
@@ -3589,12 +3685,11 @@ function renderDetailMasiva(r) {
   if (r.tErr.length || r.tWarn.length) {
     hasContent = true;
     const count = r.tErr.length + r.tWarn.length;
-    h += `<details open><summary>Errores de formato TXT <span class="badge" style="background:${r.tErr.length?'rgba(239,68,68,.15)':'rgba(251,191,36,.15)'};color:${r.tErr.length?'#ef4444':'#f59e0b'}">${count}</span></summary>`;
+    h += `<div class="result-section-title" style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;">Errores de formato TXT <span class="badge" style="background:${r.tErr.length?'rgba(239,68,68,.15)':'rgba(251,191,36,.15)'};color:${r.tErr.length?'#ef4444':'#f59e0b'}">${count}</span></div>`;
     for (const e of r.tErr)
       h += `<div class="result-item item-err" style="margin-bottom:4px"><div class="dot dot-err"></div><div class="msg">${e.msg}${e.pos?`<div class="pos-badge pos-err">${e.pos}</div>`:''}</div></div>`;
     for (const w of r.tWarn)
       h += `<div class="result-item item-warn" style="margin-bottom:4px"><div class="dot dot-warn"></div><div class="msg">${w.msg}</div></div>`;
-    h += `</details>`;
   }
 
   if (r.crossResults) {
@@ -3603,9 +3698,8 @@ function renderDetailMasiva(r) {
     const badgeColor = cErr ? 'rgba(239,68,68,.15)' : cWarn ? 'rgba(251,191,36,.15)' : 'rgba(34,197,94,.15)';
     const badgeTxt   = cErr ? '#ef4444' : cWarn ? '#f59e0b' : '#22c55e';
     const badgeLabel = cErr ? `✗ ${cErr}` : cWarn ? `↔ ${cWarn}` : `✓ ${cOk}`;
-    h += `<details open><summary>Cruce con reporte — Meta 4 <span class="badge" style="background:${badgeColor};color:${badgeTxt}">${badgeLabel}</span></summary>`;
+    h += `<div class="result-section-title" style="font-size:11px;font-weight:600;color:var(--text2);margin:10px 0 6px;">Diferencias — cruce con reporte <span class="badge" style="background:${badgeColor};color:${badgeTxt}">${badgeLabel}</span></div>`;
     h += buildCrossTableHTML(r.crossResults, { showPatch: false, idSuffix: `-${r.idx}` });
-    h += `</details>`;
   }
 
   if (!hasContent) h += `<span style="color:var(--muted);font-size:12px;">Sin errores ni advertencias para este empleado.</span>`;
